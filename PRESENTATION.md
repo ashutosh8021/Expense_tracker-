@@ -141,8 +141,8 @@ await db.execute(query, [amount, category, description, date]);
 ## Quick Setup (5 Steps)
 ```bash
 # Step 1: Clone Repository
-git clone https://github.com/ashish6123/Expense_Tracker_GUVI.git
-cd Expense_Tracker_GUVI
+git clone https://github.com/ashutosh8021/Expense_tracker-.git
+cd Expense_tracker-
 
 # Step 2: Install Dependencies
 npm install
@@ -234,7 +234,7 @@ npm start
 **Complete with comprehensive documentation, setup guides, and GitHub repository**
 
 ## GitHub Repository
-🔗 **https://github.com/ashish6123/Expense_Tracker_GUVI.git**
+🔗 **https://github.com/ashutosh8021/Expense_tracker-.git**
 
 ### Repository Features
 - ✅ Complete source code with all files

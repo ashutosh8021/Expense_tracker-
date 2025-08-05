@@ -38,9 +38,7 @@ services:
       database:
         condition: service_healthy
     restart: unless-stopped
-    volumes:
-      - .:/app
-      - /app/node_modules
+    command: ["./scripts/wait-for-db.sh", "database", "npm", "start"]
 
 volumes:
   mysql_data:
