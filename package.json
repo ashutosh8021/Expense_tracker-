@@ -1,7 +1,7 @@
 {
-  "name": "expense-tracker",
+  "name": "smart-expense-tracker",
   "version": "1.0.0",
-  "description": "A personal expense tracking application to help manage budgets and analyze spending patterns",
+  "description": "A modern personal expense tracking application with glassmorphism UI to help manage budgets and analyze spending patterns",
   "main": "api/server.js",
   "scripts": {
     "start": "node api/server.js",

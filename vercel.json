@@ -1,4 +1,5 @@
 {
+  "name": "smart-expense-tracker",
   "version": 2,
   "builds": [
     {
