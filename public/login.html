@@ -144,6 +144,20 @@
             <button type="submit" class="btn">Login</button>
             <div class="toggle-form">
                 <a href="#" onclick="toggleForm()">Don't have an account? Sign up</a>
+                <br>
+                <a href="#" onclick="showForgotPassword()" style="font-size: 0.9rem; color: #667eea; margin-top: 10px; display: inline-block;">Forgot your password?</a>
+            </div>
+        </form>
+
+        <!-- Forgot Password Form -->
+        <form id="forgot-password-form" style="display: none;">
+            <div class="form-group">
+                <label for="forgot-email">Email Address</label>
+                <input type="email" id="forgot-email" required placeholder="Enter your email address">
+            </div>
+            <button type="submit" class="btn">Send Reset Link</button>
+            <div class="toggle-form">
+                <a href="#" onclick="showLogin()">Back to Login</a>
             </div>
         </form>
 
@@ -259,6 +273,52 @@
                     toggleForm();
                 } else {
                     showMessage(data.error || 'Signup failed');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.');
+            }
+        });
+
+        // Forgot Password Functions
+        function showForgotPassword() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('signup-form').style.display = 'none';
+            document.getElementById('forgot-password-form').style.display = 'block';
+            document.querySelector('.login-header p').textContent = 'Reset your password';
+            clearMessage();
+        }
+
+        function showLogin() {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('signup-form').style.display = 'none';
+            document.getElementById('forgot-password-form').style.display = 'none';
+            document.querySelector('.login-header p').textContent = 'Manage your personal finances';
+            isSignupMode = false;
+            clearMessage();
+        }
+
+        // Forgot Password Form Handler
+        document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('forgot-email').value;
+            
+            try {
+                const response = await fetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('If this email exists, you will receive a password reset link within a few minutes. Please check your email inbox and spam folder.', 'success');
+                    document.getElementById('forgot-email').value = '';
+                } else {
+                    showMessage(data.error || 'Failed to send reset email');
                 }
             } catch (error) {
                 showMessage('Network error. Please try again.');

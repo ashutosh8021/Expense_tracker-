@@ -5,6 +5,11 @@ const path = require('path');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+
+// Load environment variables
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,6 +43,37 @@ pool.query('SELECT NOW()', (err, res) => {
     console.log('Database connection test successful:', res.rows[0]);
   }
 });
+
+// Email configuration
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // or your preferred email service
+  auth: {
+    user: process.env.EMAIL_USER || 'your-email@gmail.com',
+    pass: process.env.EMAIL_PASS || 'your-app-password'
+  }
+});
+
+// For development/demo purposes, we'll use a mock email function
+const sendEmail = async (to, subject, html) => {
+  if (process.env.NODE_ENV === 'production' && process.env.EMAIL_USER) {
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to,
+        subject,
+        html
+      });
+      console.log('Email sent successfully to:', to);
+    } catch (error) {
+      console.error('Email sending failed:', error);
+      throw error;
+    }
+  } else {
+    // Mock email for development
+    console.log(`[MOCK EMAIL] To: ${to}, Subject: ${subject}`);
+    console.log(`[MOCK EMAIL] Content: ${html}`);
+  }
+};
 
 // Middleware
 app.use(cors());
@@ -150,6 +186,187 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+// Password Reset Request
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    // For development/demo - simulate email check without database
+    if (process.env.NODE_ENV === 'development') {
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+      
+      // Store in memory for demo (in production this goes to database)
+      global.resetTokens = global.resetTokens || {};
+      global.resetTokens[resetToken] = {
+        email: email,
+        expires: expiresAt,
+        used: false
+      };
+      
+      // Create reset URL
+      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
+      
+      // Email template
+      const emailHtml = `
+        <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px;">
+          <div style="background: rgba(255,255,255,0.95); padding: 30px; border-radius: 15px; backdrop-filter: blur(10px);">
+            <h2 style="color: #333; text-align: center; margin-bottom: 20px;">🔐 Password Reset Request</h2>
+            <p style="color: #555; font-size: 16px;">Hello!</p>
+            <p style="color: #555; font-size: 16px;">You requested a password reset for your Expense Tracker account. Click the button below to reset your password:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                Reset Password
+              </a>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">Or copy and paste this link in your browser:</p>
+            <p style="background: #f8f9fa; padding: 10px; border-radius: 5px; word-break: break-all; font-size: 12px;">${resetUrl}</p>
+            
+            <p style="color: #888; font-size: 14px; margin-top: 20px;">
+              ⏰ This link will expire in 15 minutes for security.<br>
+              🚫 If you didn't request this, please ignore this email.
+            </p>
+          </div>
+        </div>
+      `;
+      
+      // Send email (mock in development)
+      await sendEmail(email, 'Reset Your Password - Expense Tracker', emailHtml);
+      
+      // Also log the reset URL for easy testing
+      console.log(`\n🔗 PASSWORD RESET LINK for ${email}:`);
+      console.log(`${resetUrl}\n`);
+      
+      res.json({ message: 'If this email exists, you will receive a password reset link.' });
+      return;
+    }
+    
+    // Production database code
+    const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userResult.rows.length === 0) {
+      return res.json({ message: 'If this email exists, you will receive a password reset link.' });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    
+    // Store reset token
+    await pool.query(
+      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [user.id, resetToken, expiresAt]
+    );
+    
+    // Create reset URL
+    const resetUrl = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
+    
+    // Email template
+    const emailHtml = `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px;">
+        <div style="background: rgba(255,255,255,0.95); padding: 30px; border-radius: 15px; backdrop-filter: blur(10px);">
+          <h2 style="color: #333; text-align: center; margin-bottom: 20px;">🔐 Password Reset Request</h2>
+          <p style="color: #555; font-size: 16px;">Hello ${user.name},</p>
+          <p style="color: #555; font-size: 16px;">You requested a password reset for your Expense Tracker account. Click the button below to reset your password:</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+              Reset Password
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px;">Or copy and paste this link in your browser:</p>
+          <p style="background: #f8f9fa; padding: 10px; border-radius: 5px; word-break: break-all; font-size: 12px;">${resetUrl}</p>
+          
+          <p style="color: #888; font-size: 14px; margin-top: 20px;">
+            ⏰ This link will expire in 15 minutes for security.<br>
+            🚫 If you didn't request this, please ignore this email.
+          </p>
+        </div>
+      </div>
+    `;
+    
+    // Send email
+    await sendEmail(email, 'Reset Your Password - Expense Tracker', emailHtml);
+    
+    res.json({ message: 'If this email exists, you will receive a password reset link.' });
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    res.status(500).json({ error: 'Failed to process password reset request' });
+  }
+});
+
+// Password Reset Confirmation
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token and new password are required' });
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    }
+    
+    // Development mode - use in-memory tokens
+    if (process.env.NODE_ENV === 'development') {
+      global.resetTokens = global.resetTokens || {};
+      const tokenData = global.resetTokens[token];
+      
+      if (!tokenData || tokenData.used || new Date() > tokenData.expires) {
+        return res.status(400).json({ error: 'Invalid or expired reset token' });
+      }
+      
+      // Mark token as used
+      tokenData.used = true;
+      
+      // In development, we'll just confirm success
+      // (In production, this would update the actual user password in database)
+      console.log(`\n✅ Password reset successful for: ${tokenData.email}`);
+      console.log(`New password: ${newPassword}\n`);
+      
+      res.json({ message: 'Password reset successfully' });
+      return;
+    }
+    
+    // Production database code
+    const tokenResult = await pool.query(`
+      SELECT prt.*, u.email, u.name 
+      FROM password_reset_tokens prt
+      JOIN users u ON prt.user_id = u.id
+      WHERE prt.token = $1 AND prt.expires_at > NOW() AND prt.used = FALSE
+    `, [token]);
+    
+    if (tokenResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+    
+    const resetData = tokenResult.rows[0];
+    
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update password
+    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, resetData.user_id]);
+    
+    // Mark token as used
+    await pool.query('UPDATE password_reset_tokens SET used = TRUE WHERE id = $1', [resetData.id]);
+    
+    // Delete all other reset tokens for this user
+    await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1 AND id != $2', [resetData.user_id, resetData.id]);
+    
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 
@@ -284,6 +501,18 @@ async function initDB() {
         category VARCHAR(50) NOT NULL,
         description TEXT,
         date DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    console.log('Creating password_reset_tokens table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        token VARCHAR(255) UNIQUE NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
