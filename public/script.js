@@ -4,6 +4,48 @@ let categories = [];
 let isEditing = false;
 let editingId = null;
 
+// Authentication helper function
+function getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login.html';
+        return {};
+    }
+    return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    };
+}
+
+// Authenticated fetch wrapper
+async function authenticatedFetch(url, options = {}) {
+    const headers = getAuthHeaders();
+    const config = {
+        ...options,
+        headers: {
+            ...headers,
+            ...options.headers
+        }
+    };
+    
+    try {
+        const response = await fetch(url, config);
+        
+        if (response.status === 401 || response.status === 403) {
+            // Token expired or invalid
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+            return null;
+        }
+        
+        return response;
+    } catch (error) {
+        console.error('Fetch error:', error);
+        throw error;
+    }
+}
+
 // Currency formatting function for Indian Rupees
 function formatCurrency(amount) {
     const num = parseFloat(amount);
@@ -128,8 +170,8 @@ async function loadExpenses(startDate = null, endDate = null) {
             if (endDate) url += `endDate=${endDate}&`;
         }
         
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to load expenses');
+        const response = await authenticatedFetch(url);
+        if (!response || !response.ok) throw new Error('Failed to load expenses');
         
         expenses = await response.json();
         renderExpenses();
@@ -147,18 +189,37 @@ async function loadExpenses(startDate = null, endDate = null) {
 // Load category summary
 async function loadCategorySummary(startDate = null, endDate = null) {
     try {
-        let url = `${API_BASE}/summary/category`;
+        // Calculate category summary from existing expenses data
+        let filteredExpenses = expenses;
+        
         if (startDate || endDate) {
-            url += '?';
-            if (startDate) url += `startDate=${startDate}&`;
-            if (endDate) url += `endDate=${endDate}&`;
+            filteredExpenses = expenses.filter(expense => {
+                const expenseDate = new Date(expense.date);
+                const start = startDate ? new Date(startDate) : null;
+                const end = endDate ? new Date(endDate) : null;
+                
+                if (start && expenseDate < start) return false;
+                if (end && expenseDate > end) return false;
+                return true;
+            });
         }
         
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to load category summary');
+        const summary = {};
+        filteredExpenses.forEach(expense => {
+            if (!summary[expense.category]) {
+                summary[expense.category] = {
+                    category: expense.category,
+                    total: 0,
+                    count: 0,
+                    color: expense.category_color || '#666'
+                };
+            }
+            summary[expense.category].total += parseFloat(expense.amount);
+            summary[expense.category].count += 1;
+        });
         
-        const summary = await response.json();
-        renderCategorySummary(summary);
+        const summaryArray = Object.values(summary).sort((a, b) => b.total - a.total);
+        renderCategorySummary(summaryArray);
         
     } catch (error) {
         console.error('Error loading category summary:', error);
@@ -296,24 +357,18 @@ async function handleFormSubmit(e) {
         
         let response;
         if (isEditing) {
-            response = await fetch(`${API_BASE}/${editingId}`, {
+            response = await authenticatedFetch(`${API_BASE}/${editingId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify(expenseData),
             });
         } else {
-            response = await fetch(API_BASE, {
+            response = await authenticatedFetch(API_BASE, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify(expenseData),
             });
         }
         
-        if (!response.ok) {
+        if (!response || !response.ok) {
             throw new Error(`Failed to ${isEditing ? 'update' : 'add'} expense`);
         }
         
@@ -390,11 +445,11 @@ async function deleteExpense(id) {
     try {
         showLoading();
         
-        const response = await fetch(`${API_BASE}/${id}`, {
+        const response = await authenticatedFetch(`${API_BASE}/${id}`, {
             method: 'DELETE',
         });
         
-        if (!response.ok) {
+        if (!response || !response.ok) {
             throw new Error('Failed to delete expense');
         }
         
