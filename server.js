@@ -50,14 +50,39 @@ app.use((req, res) => {
 // Start server
 async function startServer() {
   try {
-    await connectToDatabase();
-    app.listen(PORT, () => {
-      console.log(`Expense Tracker server running on http://localhost:${PORT}`);
-      console.log('Make sure to run "npm run init-db" if this is your first time running the app');
+    // Don't connect to database immediately on Railway
+    // Let it connect on first request instead
+    if (process.env.NODE_ENV !== 'production') {
+      await connectToDatabase();
+    }
+    
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Expense Tracker server running on port ${PORT}`);
+      console.log('Environment:', process.env.NODE_ENV || 'development');
+      console.log('Database host:', process.env.DB_HOST || 'localhost');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Make sure to run "npm run init-db" if this is your first time running the app');
+      }
     });
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, shutting down gracefully');
+      server.close(() => {
+        console.log('Process terminated');
+        process.exit(0);
+      });
+    });
+
   } catch (error) {
     console.error('Failed to start server:', error);
-    process.exit(1);
+    // In production, don't exit immediately - Railway might be starting DB
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Retrying server start in 5 seconds...');
+      setTimeout(startServer, 5000);
+    } else {
+      process.exit(1);
+    }
   }
 }
 
