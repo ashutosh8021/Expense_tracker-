@@ -347,19 +347,24 @@ async function handleFormSubmit(e) {
         date: formData.get('date')
     };
     
+    console.log('Form data being submitted:', expenseData);
+    
     // Validate form data
     if (!expenseData.amount || !expenseData.category || !expenseData.date) {
         showToast('Please fill in all required fields', 'error');
         return;
     }
     
-    if (expenseData.amount <= 0) {
-        showToast('Amount must be greater than 0', 'error');
+    if (expenseData.amount <= 0 || isNaN(expenseData.amount)) {
+        showToast('Amount must be a valid number greater than 0', 'error');
         return;
     }
     
     try {
         showLoading();
+        
+        console.log('Sending request to:', isEditing ? `${API_BASE}/${editingId}` : API_BASE);
+        console.log('Request data:', JSON.stringify(expenseData));
         
         let response;
         if (isEditing) {
@@ -374,6 +379,8 @@ async function handleFormSubmit(e) {
             });
         }
         
+        console.log('Response status:', response ? response.status : 'No response');
+        
         if (!response || !response.ok) {
             const errorText = response ? await response.text() : 'No response';
             console.error('Server response:', errorText);
@@ -381,6 +388,7 @@ async function handleFormSubmit(e) {
         }
         
         const result = await response.json();
+        console.log('Success response:', result);
         
         if (isEditing) {
             const index = expenses.findIndex(exp => exp.id === editingId);
@@ -402,7 +410,7 @@ async function handleFormSubmit(e) {
         
     } catch (error) {
         console.error('Error saving expense:', error);
-        showToast(`Failed to ${isEditing ? 'update' : 'add'} expense`, 'error');
+        showToast(`Failed to ${isEditing ? 'update' : 'add'} expense: ${error.message}`, 'error');
     } finally {
         hideLoading();
     }

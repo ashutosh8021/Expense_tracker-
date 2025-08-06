@@ -29,14 +29,18 @@ const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('Authentication check - token present:', !!token);
+
   if (!token) {
     return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
+      console.error('Token verification failed:', err.message);
       return res.status(403).json({ error: 'Invalid token.' });
     }
+    console.log('User authenticated:', user);
     req.user = user;
     next();
   });
@@ -129,14 +133,29 @@ app.get('/api/expenses', authenticateToken, async (req, res) => {
 app.post('/api/expenses', authenticateToken, async (req, res) => {
   try {
     const { amount, category, description, date } = req.body;
+    
+    // Validate required fields
+    if (!amount || !category || !date) {
+      return res.status(400).json({ error: 'Amount, category, and date are required' });
+    }
+    
+    // Validate amount is a number
+    if (isNaN(amount) || parseFloat(amount) <= 0) {
+      return res.status(400).json({ error: 'Amount must be a positive number' });
+    }
+    
+    console.log('Adding expense for user:', req.user.id, 'Data:', { amount, category, description, date });
+    
     const result = await pool.query(
       'INSERT INTO expenses (amount, category, description, date, user_id, created_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *',
       [amount, category, description, date, req.user.id]
     );
+    
+    console.log('Expense added successfully:', result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error adding expense:', error);
-    res.status(500).json({ error: 'Failed to add expense' });
+    res.status(500).json({ error: 'Failed to add expense', details: error.message });
   }
 });
 
