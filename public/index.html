@@ -73,6 +73,27 @@
             </div>
         </div>
 
+        <!-- Budget Management Section -->
+        <div class="budget-section">
+            <div class="budget-card-full">
+                <h3><i class="fas fa-wallet"></i> Budget Management</h3>
+                <div class="budget-controls">
+                    <div class="budget-input-group">
+                        <div class="input-container">
+                            <label for="monthlyBudget">Monthly Budget (₹)</label>
+                            <input type="number" id="monthlyBudget" placeholder="Enter budget amount" step="100" min="0">
+                        </div>
+                        <button id="setBudget" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Set Budget
+                        </button>
+                    </div>
+                    <div class="budget-alerts" id="budgetAlerts">
+                        <!-- Budget alerts will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <div class="main-content">
             <!-- Add Expense Form -->

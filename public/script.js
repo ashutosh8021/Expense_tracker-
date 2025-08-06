@@ -509,3 +509,131 @@ async function clearFilters() {
 // Global functions for inline event handlers
 window.editExpense = editExpense;
 window.deleteExpense = deleteExpense;
+
+// ============ BUDGET MANAGEMENT ============
+
+let monthlyBudget = 0;
+
+// Initialize budget functionality
+function initializeBudget() {
+    loadBudget();
+    setupBudgetEventListeners();
+}
+
+// Load saved budget from localStorage
+function loadBudget() {
+    const savedBudget = localStorage.getItem('monthlyBudget');
+    if (savedBudget) {
+        monthlyBudget = parseFloat(savedBudget);
+        const budgetInput = document.getElementById('monthlyBudget');
+        if (budgetInput) {
+            budgetInput.value = monthlyBudget;
+        }
+        document.getElementById('budgetAmount').textContent = formatCurrency(monthlyBudget);
+        updateBudgetProgress();
+    }
+}
+
+// Setup event listeners for budget features
+function setupBudgetEventListeners() {
+    const setBudgetBtn = document.getElementById('setBudget');
+    if (setBudgetBtn) {
+        setBudgetBtn.addEventListener('click', setBudget);
+    }
+}
+
+// Set monthly budget
+function setBudget() {
+    const budgetInput = document.getElementById('monthlyBudget');
+    const amount = parseFloat(budgetInput.value);
+    
+    if (!amount || amount <= 0) {
+        showToast('Please enter a valid budget amount', 'error');
+        return;
+    }
+    
+    monthlyBudget = amount;
+    localStorage.setItem('monthlyBudget', monthlyBudget.toString());
+    
+    document.getElementById('budgetAmount').textContent = formatCurrency(monthlyBudget);
+    updateBudgetProgress();
+    showToast('Budget set successfully!', 'success');
+}
+
+// Update budget progress and alerts
+function updateBudgetProgress() {
+    if (monthlyBudget <= 0) return;
+    
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    const monthlySpent = expenses
+        .filter(expense => expense.date.startsWith(currentMonth))
+        .reduce((total, expense) => total + parseFloat(expense.amount), 0);
+    
+    const percentage = (monthlySpent / monthlyBudget) * 100;
+    const progressFill = document.getElementById('budgetProgress');
+    const budgetText = document.getElementById('budgetText');
+    const budgetAlerts = document.getElementById('budgetAlerts');
+    
+    if (!progressFill || !budgetText || !budgetAlerts) return;
+    
+    // Update progress bar
+    progressFill.style.width = Math.min(percentage, 100) + '%';
+    
+    // Update budget text
+    const remaining = monthlyBudget - monthlySpent;
+    if (remaining > 0) {
+        budgetText.textContent = `₹${remaining.toFixed(2)} remaining`;
+    } else {
+        budgetText.textContent = `₹${Math.abs(remaining).toFixed(2)} over budget`;
+    }
+    
+    // Update progress bar color based on percentage
+    if (percentage >= 100) {
+        progressFill.style.background = '#f5576c';
+    } else if (percentage >= 80) {
+        progressFill.style.background = '#ffeaa7';
+    } else {
+        progressFill.style.background = 'white';
+    }
+    
+    // Show budget alerts
+    budgetAlerts.innerHTML = '';
+    
+    if (percentage >= 100) {
+        budgetAlerts.innerHTML = `
+            <div class="budget-alert danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                You have exceeded your monthly budget by ₹${Math.abs(remaining).toFixed(2)}!
+            </div>
+        `;
+    } else if (percentage >= 80) {
+        budgetAlerts.innerHTML = `
+            <div class="budget-alert warning">
+                <i class="fas fa-exclamation-circle"></i>
+                Warning: You've used ${percentage.toFixed(1)}% of your monthly budget.
+            </div>
+        `;
+    } else if (percentage >= 50) {
+        budgetAlerts.innerHTML = `
+            <div class="budget-alert success">
+                <i class="fas fa-info-circle"></i>
+                You're doing well! ${percentage.toFixed(1)}% of budget used.
+            </div>
+        `;
+    }
+}
+
+// Enhanced update summary to include budget progress
+const originalUpdateSummary = updateSummary;
+updateSummary = function() {
+    originalUpdateSummary.call(this);
+    updateBudgetProgress();
+};
+
+// Initialize budget features when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for the original initialization to complete
+    setTimeout(() => {
+        initializeBudget();
+    }, 500);
+});
