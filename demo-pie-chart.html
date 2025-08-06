@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pie Chart Demo - Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Pie Chart Section */
+        .pie-chart-section {
+            margin-bottom: 40px;
+        }
+
+        .pie-chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 35px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .pie-chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 35px 70px rgba(0, 0, 0, 0.15);
+        }
+
+        .pie-chart-card h3 {
+            margin-bottom: 30px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .pie-chart-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .pie-chart-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pie-chart {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, 
+                #667eea 0deg 108deg,
+                #764ba2 108deg 180deg,
+                #f093fb 180deg 252deg,
+                #4facfe 252deg 288deg,
+                #43e97b 288deg 360deg
+            );
+            transition: all 0.6s ease;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .pie-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .pie-total {
+            text-align: center;
+        }
+
+        .pie-amount {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .pie-label {
+            font-size: 0.8rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .pie-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .pie-legend-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .pie-legend-item:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .pie-legend-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pie-legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .pie-legend-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pie-legend-category {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .pie-legend-percentage {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .pie-legend-amount {
+            font-weight: 700;
+            color: #333;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            .pie-chart-container {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
+            
+            .pie-chart {
+                width: 200px;
+                height: 200px;
+            }
+            
+            .pie-center {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .pie-amount {
+                font-size: 1rem;
+            }
+        }
+
+        .demo-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 10px 10px 0;
+        }
+
+        .demo-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .demo-controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-chart-pie"></i> Expense Pie Chart Demo</h1>
+            <p>Beautiful CSS-only pie chart visualization</p>
+        </div>
+
+        <div class="demo-controls">
+            <button class="demo-btn" onclick="loadSampleData()">Load Sample Data</button>
+            <button class="demo-btn" onclick="updateChart()">Refresh Chart</button>
+            <button class="demo-btn" onclick="clearChart()">Clear Chart</button>
+        </div>
+
+        <!-- Pie Chart Section -->
+        <div class="pie-chart-section">
+            <div class="pie-chart-card">
+                <h3><i class="fas fa-chart-pie"></i> Expense Distribution</h3>
+                <div class="pie-chart-container">
+                    <div class="pie-chart-wrapper">
+                        <div class="pie-chart" id="pieChart">
+                            <div class="pie-center">
+                                <div class="pie-total">
+                                    <span class="pie-amount" id="pieTotalAmount">₹15,750</span>
+                                    <span class="pie-label">Total Spent</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pie-legend" id="pieLegend">
+                        <div class="pie-legend-item">
+                            <div class="pie-legend-left">
+                                <div class="pie-legend-color" style="background-color: #667eea"></div>
+                                <div class="pie-legend-info">
+                                    <div class="pie-legend-category">Food & Dining</div>
+                                    <div class="pie-legend-percentage">30.5% • 15 transactions</div>
+                                </div>
+                            </div>
+                            <div class="pie-legend-amount">₹4,800</div>
+                        </div>
+                        
+                        <div class="pie-legend-item">
+                            <div class="pie-legend-left">
+                                <div class="pie-legend-color" style="background-color: #764ba2"></div>
+                                <div class="pie-legend-info">
+                                    <div class="pie-legend-category">Transportation</div>
+                                    <div class="pie-legend-percentage">20.0% • 8 transactions</div>
+                                </div>
+                            </div>
+                            <div class="pie-legend-amount">₹3,150</div>
+                        </div>
+                        
+                        <div class="pie-legend-item">
+                            <div class="pie-legend-left">
+                                <div class="pie-legend-color" style="background-color: #f093fb"></div>
+                                <div class="pie-legend-info">
+                                    <div class="pie-legend-category">Shopping</div>
+                                    <div class="pie-legend-percentage">20.0% • 6 transactions</div>
+                                </div>
+                            </div>
+                            <div class="pie-legend-amount">₹3,150</div>
+                        </div>
+                        
+                        <div class="pie-legend-item">
+                            <div class="pie-legend-left">
+                                <div class="pie-legend-color" style="background-color: #4facfe"></div>
+                                <div class="pie-legend-info">
+                                    <div class="pie-legend-category">Entertainment</div>
+                                    <div class="pie-legend-percentage">10.0% • 4 transactions</div>
+                                </div>
+                            </div>
+                            <div class="pie-legend-amount">₹1,575</div>
+                        </div>
+                        
+                        <div class="pie-legend-item">
+                            <div class="pie-legend-left">
+                                <div class="pie-legend-color" style="background-color: #43e97b"></div>
+                                <div class="pie-legend-info">
+                                    <div class="pie-legend-category">Bills & Utilities</div>
+                                    <div class="pie-legend-percentage">19.5% • 3 transactions</div>
+                                </div>
+                            </div>
+                            <div class="pie-legend-amount">₹3,075</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).format(amount);
+        }
+
+        function loadSampleData() {
+            const sampleExpenses = [
+                { category: 'Food & Dining', amount: 4800, color: '#667eea', count: 15 },
+                { category: 'Transportation', amount: 3150, color: '#764ba2', count: 8 },
+                { category: 'Shopping', amount: 3150, color: '#f093fb', count: 6 },
+                { category: 'Entertainment', amount: 1575, color: '#4facfe', count: 4 },
+                { category: 'Bills & Utilities', amount: 3075, color: '#43e97b', count: 3 }
+            ];
+            
+            updatePieChart(sampleExpenses);
+        }
+
+        function updatePieChart(expenses) {
+            const pieChart = document.getElementById('pieChart');
+            const pieLegend = document.getElementById('pieLegend');
+            const pieTotalAmount = document.getElementById('pieTotalAmount');
+            
+            const totalAmount = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            pieTotalAmount.textContent = formatCurrency(totalAmount);
+            
+            // Generate pie chart using conic-gradient
+            let currentAngle = 0;
+            const gradientStops = [];
+            
+            expenses.forEach((item) => {
+                const percentage = (item.amount / totalAmount) * 100;
+                const angle = (percentage / 100) * 360;
+                const startAngle = currentAngle;
+                const endAngle = currentAngle + angle;
+                
+                gradientStops.push(`${item.color} ${startAngle}deg ${endAngle}deg`);
+                currentAngle = endAngle;
+            });
+            
+            const gradientString = `conic-gradient(from 0deg, ${gradientStops.join(', ')})`;
+            pieChart.style.background = gradientString;
+            
+            // Generate legend
+            pieLegend.innerHTML = expenses.map(item => {
+                const percentage = ((item.amount / totalAmount) * 100).toFixed(1);
+                return `
+                    <div class="pie-legend-item">
+                        <div class="pie-legend-left">
+                            <div class="pie-legend-color" style="background-color: ${item.color}"></div>
+                            <div class="pie-legend-info">
+                                <div class="pie-legend-category">${item.category}</div>
+                                <div class="pie-legend-percentage">${percentage}% • ${item.count} transaction${item.count !== 1 ? 's' : ''}</div>
+                            </div>
+                        </div>
+                        <div class="pie-legend-amount">${formatCurrency(item.amount)}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add animation
+            pieChart.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                pieChart.style.transform = 'scale(1)';
+            }, 100);
+        }
+
+        function updateChart() {
+            const currentData = [
+                { category: 'Food & Dining', amount: Math.floor(Math.random() * 5000) + 2000, color: '#667eea', count: Math.floor(Math.random() * 20) + 5 },
+                { category: 'Transportation', amount: Math.floor(Math.random() * 4000) + 1500, color: '#764ba2', count: Math.floor(Math.random() * 15) + 3 },
+                { category: 'Shopping', amount: Math.floor(Math.random() * 6000) + 1000, color: '#f093fb', count: Math.floor(Math.random() * 10) + 2 },
+                { category: 'Entertainment', amount: Math.floor(Math.random() * 3000) + 500, color: '#4facfe', count: Math.floor(Math.random() * 8) + 1 },
+                { category: 'Bills & Utilities', amount: Math.floor(Math.random() * 4000) + 2000, color: '#43e97b', count: Math.floor(Math.random() * 5) + 2 }
+            ];
+            
+            updatePieChart(currentData);
+        }
+
+        function clearChart() {
+            const pieChart = document.getElementById('pieChart');
+            const pieLegend = document.getElementById('pieLegend');
+            const pieTotalAmount = document.getElementById('pieTotalAmount');
+            
+            pieTotalAmount.textContent = '₹0';
+            pieChart.style.background = '#e9ecef';
+            pieLegend.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">No expense data available</p>';
+        }
+
+        // Load sample data on page load
+        loadSampleData();
+    </script>
+</body>
+</html>

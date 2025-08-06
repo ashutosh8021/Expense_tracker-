@@ -165,6 +165,197 @@ function populateCategorySelect() {
     });
 }
 
+// Update weekly trends
+function updateWeeklyTrends() {
+    const weeklyChart = document.getElementById('weeklyChart');
+    const weeklySummary = document.getElementById('weeklySummary');
+    
+    if (!weeklyChart || !weeklySummary) return;
+    
+    // Calculate last 7 days
+    const today = new Date();
+    const weekData = {};
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    // Initialize week data
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateKey = date.toDateString();
+        weekData[dateKey] = {
+            amount: 0,
+            count: 0,
+            day: dayNames[date.getDay()],
+            date: date.getDate()
+        };
+    }
+    
+    // Populate with expense data
+    expenses.forEach(expense => {
+        const expenseDate = new Date(expense.date);
+        const dateKey = expenseDate.toDateString();
+        if (weekData[dateKey]) {
+            weekData[dateKey].amount += parseFloat(expense.amount);
+            weekData[dateKey].count += 1;
+        }
+    });
+    
+    const weekArray = Object.values(weekData);
+    const maxAmount = Math.max(...weekArray.map(day => day.amount), 1);
+    
+    // Render weekly chart
+    weeklyChart.innerHTML = weekArray.map(day => {
+        const height = (day.amount / maxAmount) * 120; // Scale to max 120px
+        return `
+            <div class="week-day">
+                <div 
+                    class="week-bar" 
+                    style="height: ${height}px;"
+                    data-amount="${formatCurrency(day.amount)}"
+                    title="${day.day}: ${formatCurrency(day.amount)} (${day.count} transactions)"
+                ></div>
+                <div class="week-label">${day.day}</div>
+            </div>
+        `;
+    }).join('');
+    
+    // Calculate weekly stats
+    const totalWeekly = weekArray.reduce((sum, day) => sum + day.amount, 0);
+    const avgDaily = totalWeekly / 7;
+    const mostExpensiveDay = weekArray.reduce((max, day) => day.amount > max.amount ? day : max, weekArray[0]);
+    const totalTransactions = weekArray.reduce((sum, day) => sum + day.count, 0);
+    
+    // Render weekly summary
+    weeklySummary.innerHTML = `
+        <div class="weekly-stat">
+            <div class="weekly-stat-label">Week Total</div>
+            <div class="weekly-stat-value">${formatCurrency(totalWeekly)}</div>
+        </div>
+        <div class="weekly-stat">
+            <div class="weekly-stat-label">Daily Average</div>
+            <div class="weekly-stat-value">${formatCurrency(avgDaily)}</div>
+        </div>
+        <div class="weekly-stat">
+            <div class="weekly-stat-label">Highest Day</div>
+            <div class="weekly-stat-value">${mostExpensiveDay.day} - ${formatCurrency(mostExpensiveDay.amount)}</div>
+        </div>
+        <div class="weekly-stat">
+            <div class="weekly-stat-label">Transactions</div>
+            <div class="weekly-stat-value">${totalTransactions}</div>
+        </div>
+    `;
+}
+
+// Update pie chart
+function updatePieChart() {
+    const pieChart = document.getElementById('pieChart');
+    const pieLegend = document.getElementById('pieLegend');
+    const pieTotalAmount = document.getElementById('pieTotalAmount');
+    
+    if (!pieChart || !pieLegend || !pieTotalAmount) return;
+    
+    if (expenses.length === 0) {
+        pieChart.parentElement.parentElement.innerHTML = `
+            <div class="pie-empty">
+                <i class="fas fa-chart-pie"></i>
+                <h4>No expenses to visualize</h4>
+                <p>Add some expenses to see the pie chart</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Calculate category totals
+    const categoryTotals = {};
+    let totalAmount = 0;
+    
+    expenses.forEach(expense => {
+        const category = expense.category;
+        const amount = parseFloat(expense.amount);
+        
+        if (!categoryTotals[category]) {
+            categoryTotals[category] = {
+                total: 0,
+                color: expense.category_color || getRandomColor(),
+                count: 0
+            };
+        }
+        
+        categoryTotals[category].total += amount;
+        categoryTotals[category].count += 1;
+        totalAmount += amount;
+    });
+    
+    // Convert to array and sort by amount
+    const categoryArray = Object.entries(categoryTotals)
+        .map(([category, data]) => ({
+            category,
+            total: data.total,
+            color: data.color,
+            count: data.count,
+            percentage: (data.total / totalAmount) * 100
+        }))
+        .sort((a, b) => b.total - a.total);
+    
+    // Update total amount
+    pieTotalAmount.textContent = formatCurrency(totalAmount);
+    
+    // Generate pie chart using conic-gradient
+    let currentAngle = 0;
+    const gradientStops = [];
+    
+    categoryArray.forEach((item, index) => {
+        const angle = (item.percentage / 100) * 360;
+        const startAngle = currentAngle;
+        const endAngle = currentAngle + angle;
+        
+        gradientStops.push(`${item.color} ${startAngle}deg ${endAngle}deg`);
+        currentAngle = endAngle;
+    });
+    
+    // Apply the gradient to pie chart
+    const gradientString = `conic-gradient(from 0deg, ${gradientStops.join(', ')})`;
+    pieChart.style.background = gradientString;
+    
+    // Generate legend
+    pieLegend.innerHTML = categoryArray.map(item => `
+        <div class="pie-legend-item" data-category="${item.category}">
+            <div class="pie-legend-left">
+                <div class="pie-legend-color" style="background-color: ${item.color}"></div>
+                <div class="pie-legend-info">
+                    <div class="pie-legend-category">${item.category}</div>
+                    <div class="pie-legend-percentage">${item.percentage.toFixed(1)}% • ${item.count} transaction${item.count !== 1 ? 's' : ''}</div>
+                </div>
+            </div>
+            <div class="pie-legend-amount">${formatCurrency(item.total)}</div>
+        </div>
+    `).join('');
+    
+    // Add hover effects
+    const legendItems = pieLegend.querySelectorAll('.pie-legend-item');
+    legendItems.forEach((item, index) => {
+        item.addEventListener('mouseenter', () => {
+            pieChart.style.transform = 'scale(1.05)';
+            pieChart.style.filter = 'brightness(1.1)';
+        });
+        
+        item.addEventListener('mouseleave', () => {
+            pieChart.style.transform = 'scale(1)';
+            pieChart.style.filter = 'brightness(1)';
+        });
+    });
+}
+
+// Generate random color for categories
+function getRandomColor() {
+    const colors = [
+        '#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b',
+        '#fa709a', '#fee140', '#96deda', '#ffecd2', '#fcb69f',
+        '#ffeaa7', '#fd79a8', '#fdcb6e', '#6c5ce7', '#a29bfe'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+}
+
 // Load expenses from API
 async function loadExpenses(startDate = null, endDate = null) {
     try {
@@ -184,6 +375,8 @@ async function loadExpenses(startDate = null, endDate = null) {
         renderExpenses();
         updateSummary();
         await loadCategorySummary(startDate, endDate);
+        updateWeeklyTrends();
+        updatePieChart();
         
     } catch (error) {
         console.error('Error loading expenses:', error);
@@ -282,8 +475,12 @@ function renderExpenses() {
 function renderCategorySummary(summary) {
     if (summary.length === 0) {
         categorySummaryEl.innerHTML = '<p class="text-muted">No expenses in the selected period</p>';
+        renderSpendingChart([]);
         return;
     }
+    
+    // Render the visual chart
+    renderSpendingChart(summary);
     
     categorySummaryEl.innerHTML = summary.map(item => {
         const color = item.color || '#667eea';
@@ -302,6 +499,57 @@ function renderCategorySummary(summary) {
     }).join('');
 }
 
+// Render spending chart with CSS bars
+function renderSpendingChart(summary) {
+    const chartContainer = document.getElementById('spendingChart');
+    const legendContainer = document.getElementById('chartLegend');
+    
+    if (!chartContainer || !legendContainer) return;
+    
+    if (summary.length === 0) {
+        chartContainer.innerHTML = `
+            <div class="chart-empty">
+                <i class="fas fa-chart-bar"></i>
+                <p>No data to display</p>
+            </div>
+        `;
+        legendContainer.innerHTML = '';
+        return;
+    }
+    
+    // Find the maximum amount for scaling
+    const maxAmount = Math.max(...summary.map(item => item.total));
+    
+    // Create chart bars
+    chartContainer.innerHTML = summary.slice(0, 6).map(item => {
+        const height = (item.total / maxAmount) * 150; // Scale to max 150px
+        const color = item.color || '#667eea';
+        
+        return `
+            <div 
+                class="chart-bar" 
+                style="height: ${height}px; --bar-color: ${color};"
+                data-amount="${formatCurrency(item.total)}"
+                data-category="${item.category.substring(0, 8)}"
+                title="${item.category}: ${formatCurrency(item.total)}"
+            ></div>
+        `;
+    }).join('');
+    
+    // Create legend
+    legendContainer.innerHTML = summary.slice(0, 6).map(item => {
+        const color = item.color || '#667eea';
+        const percentage = ((item.total / summary.reduce((sum, s) => sum + s.total, 0)) * 100).toFixed(1);
+        
+        return `
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: ${color}"></div>
+                <span class="legend-text">${item.category} (${percentage}%)</span>
+            </div>
+        `;
+    }).join('');
+}
+
 // Get icon for category
 function getCategoryIcon(category) {
     const icons = {
@@ -312,6 +560,13 @@ function getCategoryIcon(category) {
         'Bills': 'file-invoice-dollar',
         'Healthcare': 'medkit',
         'Education': 'graduation-cap',
+        'Travel': 'plane',
+        'Groceries': 'shopping-cart',
+        'Utilities': 'lightbulb',
+        'Rent': 'home',
+        'Insurance': 'shield-alt',
+        'Dining': 'coffee',
+        'Fuel': 'gas-pump',
         'Other': 'ellipsis-h'
     };
     return icons[category] || 'money-bill-wave';
@@ -623,11 +878,12 @@ function updateBudgetProgress() {
     }
 }
 
-// Enhanced update summary to include budget progress
+// Enhanced update summary to include budget progress and pie chart
 const originalUpdateSummary = updateSummary;
 updateSummary = function() {
     originalUpdateSummary.call(this);
     updateBudgetProgress();
+    updatePieChart();
 };
 
 // Initialize budget features when DOM is loaded
@@ -637,3 +893,21 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeBudget();
     }, 500);
 });
+
+// Set quick amount
+function setQuickAmount(amount) {
+    const amountInput = document.getElementById('amount');
+    if (amountInput) {
+        amountInput.value = amount;
+        amountInput.focus();
+        
+        // Add visual feedback
+        amountInput.style.background = 'rgba(102, 126, 234, 0.1)';
+        setTimeout(() => {
+            amountInput.style.background = '';
+        }, 300);
+    }
+}
+
+// Global function for quick amount buttons
+window.setQuickAmount = setQuickAmount;

@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
 </head>
 <body>
@@ -39,6 +38,10 @@
                 <div class="summary-content">
                     <h3>Total Expenses</h3>
                     <p class="summary-amount" id="totalExpenses">₹0.00</p>
+                    <div class="trend-indicator" id="totalTrend">
+                        <span class="trend-arrow">📊</span>
+                        <span class="trend-text">All time</span>
+                    </div>
                 </div>
             </div>
             <div class="summary-card">
@@ -48,6 +51,10 @@
                 <div class="summary-content">
                     <h3>This Month</h3>
                     <p class="summary-amount" id="monthlyExpenses">₹0.00</p>
+                    <div class="trend-indicator" id="monthlyTrend">
+                        <span class="trend-arrow">📈</span>
+                        <span class="trend-text">vs last month</span>
+                    </div>
                 </div>
             </div>
             <div class="summary-card">
@@ -57,6 +64,10 @@
                 <div class="summary-content">
                     <h3>Transactions</h3>
                     <p class="summary-amount" id="totalTransactions">0</p>
+                    <div class="trend-indicator" id="transactionTrend">
+                        <span class="trend-arrow">🔢</span>
+                        <span class="trend-text">entries recorded</span>
+                    </div>
                 </div>
             </div>
             <div class="summary-card budget-card">
@@ -97,11 +108,55 @@
             </div>
         </div>
 
+        <!-- Weekly Trends Section -->
+        <div class="trends-section">
+            <div class="trends-card">
+                <h3><i class="fas fa-chart-line"></i> Weekly Spending Pattern</h3>
+                <div class="weekly-chart" id="weeklyChart">
+                    <!-- Weekly chart will be populated here -->
+                </div>
+                <div class="weekly-summary" id="weeklySummary">
+                    <!-- Weekly summary will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Pie Chart Section -->
+        <div class="pie-chart-section">
+            <div class="pie-chart-card">
+                <h3><i class="fas fa-chart-pie"></i> Expense Distribution</h3>
+                <div class="pie-chart-container">
+                    <div class="pie-chart-wrapper">
+                        <div class="pie-chart" id="pieChart">
+                            <div class="pie-center">
+                                <div class="pie-total">
+                                    <span class="pie-amount" id="pieTotalAmount">₹0</span>
+                                    <span class="pie-label">Total Spent</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pie-legend" id="pieLegend">
+                        <!-- Pie chart legend will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <div class="main-content">
             <!-- Add Expense Form -->
             <div class="form-section">
-                <h2><i class="fas fa-plus-circle"></i> Add New Expense</h2>
+                <div class="section-header">
+                    <h2><i class="fas fa-plus-circle"></i> Add New Expense</h2>
+                    <div class="quick-amounts">
+                        <span class="quick-amount-label">Quick Add:</span>
+                        <button type="button" class="quick-btn" onclick="setQuickAmount(50)">₹50</button>
+                        <button type="button" class="quick-btn" onclick="setQuickAmount(100)">₹100</button>
+                        <button type="button" class="quick-btn" onclick="setQuickAmount(500)">₹500</button>
+                        <button type="button" class="quick-btn" onclick="setQuickAmount(1000)">₹1000</button>
+                    </div>
+                </div>
                 <form id="expenseForm" class="expense-form">
                     <div class="form-group">
                         <label for="amount">Amount (₹)</label>
@@ -157,6 +212,19 @@
                 <!-- Category Summary -->
                 <div class="category-summary">
                     <h4><i class="fas fa-chart-pie"></i> Spending by Category</h4>
+                    
+                    <!-- Visual Chart Section -->
+                    <div class="visual-chart-section">
+                        <div class="chart-container">
+                            <div class="spending-chart" id="spendingChart">
+                                <!-- Chart bars will be populated here -->
+                            </div>
+                        </div>
+                        <div class="chart-legend" id="chartLegend">
+                            <!-- Legend will be populated here -->
+                        </div>
+                    </div>
+                    
                     <div id="categorySummary" class="category-list">
                         <!-- Category items will be populated here -->
                     </div>
