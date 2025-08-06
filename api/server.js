@@ -1,3 +1,4 @@
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -45,33 +46,111 @@ pool.query('SELECT NOW()', (err, res) => {
 });
 
 // Email configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // or your preferred email service
-  auth: {
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASS || 'your-app-password'
+const getEmailTransporter = () => {
+  if (process.env.SENDGRID_API_KEY) {
+    // SendGrid configuration (production)
+    console.log('🔧 Using SendGrid for email delivery');
+    return nodemailer.createTransport({
+      service: 'SendGrid',
+      auth: {
+        user: 'apikey',
+        pass: process.env.SENDGRID_API_KEY
+      }
+    });
+  } else if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    // Gmail configuration (fallback)
+    console.log('🔧 Using Gmail for email delivery');
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+  } else {
+    console.log('⚠️ No email credentials configured - using mock mode');
+    return null;
   }
-});
+};
 
-// For development/demo purposes, we'll use a mock email function
+const transporter = getEmailTransporter();
+
+// Verify email configuration on startup
+if (transporter) {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('❌ Email configuration error:', error);
+    } else {
+      console.log('✅ Email server is ready to send messages');
+      if (process.env.SENDGRID_API_KEY) {
+        console.log('📧 Using SendGrid service');
+      } else {
+        console.log('📧 Using Gmail service');
+      }
+    }
+  });
+} else {
+  console.log('📧 Email service not configured - running in mock mode');
+}
+
+// Enhanced email sending function
 const sendEmail = async (to, subject, html) => {
-  if (process.env.NODE_ENV === 'production' && process.env.EMAIL_USER) {
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
+  try {
+    // Check if we have email credentials configured
+    const hasEmailConfig = process.env.SENDGRID_API_KEY || (process.env.EMAIL_USER && process.env.EMAIL_PASS);
+    
+    if (hasEmailConfig && transporter) {
+      // Send real email (works in both development and production)
+      const fromEmail = process.env.FROM_EMAIL || process.env.EMAIL_USER || 'noreply@expense-tracker.com';
+      
+      const info = await transporter.sendMail({
+        from: `"Expense Tracker" <${fromEmail}>`,
         to,
         subject,
         html
       });
-      console.log('Email sent successfully to:', to);
-    } catch (error) {
-      console.error('Email sending failed:', error);
-      throw error;
+      
+      console.log('✅ Email sent successfully:', info.messageId);
+      console.log('📧 Email delivered to:', to);
+      
+      if (process.env.SENDGRID_API_KEY) {
+        console.log('📬 Delivered via SendGrid');
+      } else {
+        console.log('📬 Delivered via Gmail');
+      }
+      
+      return { success: true, messageId: info.messageId };
+    } else {
+      // No email config - enhanced mock
+      console.log('\n📧 ===== MOCK EMAIL DELIVERY =====');
+      console.log(`📬 To: ${to}`);
+      console.log(`📋 Subject: ${subject}`);
+      console.log('🎨 Email Content Preview:');
+      console.log('─'.repeat(50));
+      // Extract just the main message from HTML
+      const textContent = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+      const preview = textContent.substring(0, 200) + '...';
+      console.log(preview);
+      console.log('─'.repeat(50));
+      console.log('💡 To enable real emails:');
+      console.log('   Set SENDGRID_API_KEY for production email delivery');
+      console.log('   Or set EMAIL_USER and EMAIL_PASS for Gmail delivery');
+      console.log('📧 ================================\n');
+      
+      return { success: true, messageId: 'mock-' + Date.now() };
     }
-  } else {
-    // Mock email for development
-    console.log(`[MOCK EMAIL] To: ${to}, Subject: ${subject}`);
-    console.log(`[MOCK EMAIL] Content: ${html}`);
+  } catch (error) {
+    console.error('❌ Email sending failed:', error);
+    
+    // Log specific SendGrid errors
+    if (error.code) {
+      console.error('📧 SendGrid Error Code:', error.code);
+    }
+    if (error.response && error.response.body) {
+      console.error('📧 SendGrid Error Details:', error.response.body);
+    }
+    
+    throw error;
   }
 };
 

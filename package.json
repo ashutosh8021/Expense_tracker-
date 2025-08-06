@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node api/server.js",
     "build": "echo 'Build complete'",
-    "dev": "node api/server.js"
+    "dev": "node api/server.js",
+    "test-email": "node test-email.js"
   },
   "keywords": ["expense", "tracker", "budget", "personal-finance"],
   "author": "",
