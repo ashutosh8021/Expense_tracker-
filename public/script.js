@@ -707,13 +707,23 @@ function cancelEdit() {
     cancelEditBtn.style.display = 'none';
 }
 
-// Delete expense
+// Delete expense with enhanced confirmation
 async function deleteExpense(id) {
-    if (!confirm('Are you sure you want to delete this expense?')) {
-        return;
-    }
+    const expense = expenses.find(exp => exp.id === id);
+    if (!expense) return;
+    
+    // Create custom confirmation modal
+    const confirmDelete = await showDeleteConfirmation(expense);
+    if (!confirmDelete) return;
     
     try {
+        // Add visual feedback - fade out the expense item
+        const expenseElement = document.querySelector(`[data-expense-id="${id}"]`);
+        if (expenseElement) {
+            expenseElement.style.opacity = '0.5';
+            expenseElement.style.transform = 'translateX(-20px)';
+        }
+        
         showLoading();
         
         const response = await authenticatedFetch(`${API_BASE}/${id}`, {
@@ -728,15 +738,79 @@ async function deleteExpense(id) {
         renderExpenses();
         updateSummary();
         await loadCategorySummary();
+        updateWeeklyTrends();
         
-        showToast('Expense deleted successfully', 'success');
+        showToast(`Expense deleted successfully: ${formatCurrency(expense.amount)} from ${expense.category}`, 'success');
         
     } catch (error) {
         console.error('Error deleting expense:', error);
         showToast('Failed to delete expense', 'error');
+        
+        // Restore visual state on error
+        const expenseElement = document.querySelector(`[data-expense-id="${id}"]`);
+        if (expenseElement) {
+            expenseElement.style.opacity = '1';
+            expenseElement.style.transform = 'translateX(0)';
+        }
     } finally {
         hideLoading();
     }
+}
+
+// Custom delete confirmation modal
+function showDeleteConfirmation(expense) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'delete-modal-overlay';
+        modal.innerHTML = `
+            <div class="delete-modal">
+                <div class="delete-modal-header">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Confirm Delete</h3>
+                </div>
+                <div class="delete-modal-body">
+                    <p>Are you sure you want to delete this expense?</p>
+                    <div class="expense-preview">
+                        <div class="expense-preview-amount">${formatCurrency(expense.amount)}</div>
+                        <div class="expense-preview-category">${expense.category}</div>
+                        <div class="expense-preview-description">${expense.description || 'No description'}</div>
+                        <div class="expense-preview-date">${new Date(expense.date).toLocaleDateString()}</div>
+                    </div>
+                    <p class="warning-text">This action cannot be undone.</p>
+                </div>
+                <div class="delete-modal-actions">
+                    <button class="btn btn-secondary cancel-btn">Cancel</button>
+                    <button class="btn btn-danger confirm-btn">
+                        <i class="fas fa-trash"></i> Delete Expense
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Add event listeners
+        modal.querySelector('.cancel-btn').onclick = () => {
+            document.body.removeChild(modal);
+            resolve(false);
+        };
+        
+        modal.querySelector('.confirm-btn').onclick = () => {
+            document.body.removeChild(modal);
+            resolve(true);
+        };
+        
+        // Close on overlay click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+                resolve(false);
+            }
+        };
+        
+        // Add animation
+        setTimeout(() => modal.classList.add('show'), 10);
+    });
 }
 
 // Apply filters
