@@ -284,10 +284,28 @@ async function initDB() {
         category VARCHAR(50) NOT NULL,
         description TEXT,
         date DATE NOT NULL,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add user_id column if it doesn't exist (migration for existing tables)
+    console.log('Checking if user_id column exists...');
+    const columnCheck = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name='expenses' AND column_name='user_id'
+    `);
+
+    if (columnCheck.rows.length === 0) {
+      console.log('Adding user_id column to expenses table...');
+      await pool.query(`
+        ALTER TABLE expenses 
+        ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+      `);
+      console.log('user_id column added successfully');
+    } else {
+      console.log('user_id column already exists');
+    }
 
     // Insert default categories
     console.log('Inserting default categories...');
