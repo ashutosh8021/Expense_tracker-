@@ -10,10 +10,33 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
+console.log('Server starting...');
+console.log('Environment:', process.env.NODE_ENV);
+console.log('Database URL present:', !!process.env.DATABASE_URL);
+console.log('Port:', PORT);
+
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Test database connection
+pool.on('connect', () => {
+  console.log('Connected to PostgreSQL database');
+});
+
+pool.on('error', (err) => {
+  console.error('Database connection error:', err);
+});
+
+// Test connection immediately
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection test failed:', err);
+  } else {
+    console.log('Database connection test successful:', res.rows[0]);
+  }
 });
 
 // Middleware
@@ -47,8 +70,25 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+app.get('/health', async (req, res) => {
+  try {
+    // Test database connection
+    const dbTest = await pool.query('SELECT NOW()');
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      database: 'Connected',
+      dbTime: dbTest.rows[0].now
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(500).json({ 
+      status: 'ERROR', 
+      timestamp: new Date().toISOString(),
+      database: 'Disconnected',
+      error: error.message
+    });
+  }
 });
 
 // Auth Routes
@@ -209,7 +249,14 @@ app.get('/', (req, res) => {
 // Initialize database
 async function initDB() {
   try {
+    console.log('Starting database initialization...');
+    
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
+
     // Create users table
+    console.log('Creating users table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -220,6 +267,7 @@ async function initDB() {
       )
     `);
 
+    console.log('Creating categories table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS categories (
         id SERIAL PRIMARY KEY,
@@ -228,6 +276,7 @@ async function initDB() {
       )
     `);
 
+    console.log('Creating expenses table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS expenses (
         id SERIAL PRIMARY KEY,
@@ -241,6 +290,7 @@ async function initDB() {
     `);
 
     // Insert default categories
+    console.log('Inserting default categories...');
     const categories = [
       ['Food', '#FF6B6B'],
       ['Transportation', '#4ECDC4'],
@@ -262,6 +312,8 @@ async function initDB() {
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Database initialization error:', error);
+    console.error('Error details:', error.message);
+    // Don't exit the process, but log the error
   }
 }
 
