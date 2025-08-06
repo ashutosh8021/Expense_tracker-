@@ -75,6 +75,13 @@ const API_BASE = '/api/expenses';
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login.html';
+        return;
+    }
+    
     // Set default date to today
     document.getElementById('date').value = new Date().toISOString().split('T')[0];
     
@@ -279,17 +286,17 @@ function renderCategorySummary(summary) {
     }
     
     categorySummaryEl.innerHTML = summary.map(item => {
-        const color = item.category_color || '#667eea';
+        const color = item.color || '#667eea';
         return `
             <div class="category-item">
                 <div class="category-info">
                     <div class="category-color" style="background-color: ${color}"></div>
                     <div class="category-details">
                         <h5>${item.category}</h5>
-                        <p>${item.transaction_count} transaction${item.transaction_count !== 1 ? 's' : ''}</p>
+                        <p>${item.count} transaction${item.count !== 1 ? 's' : ''}</p>
                     </div>
                 </div>
-                <div class="category-amount">${formatCurrency(item.total_amount)}</div>
+                <div class="category-amount">${formatCurrency(item.total)}</div>
             </div>
         `;
     }).join('');
@@ -298,14 +305,13 @@ function renderCategorySummary(summary) {
 // Get icon for category
 function getCategoryIcon(category) {
     const icons = {
-        'Food & Dining': 'utensils',
+        'Food': 'utensils',
         'Transportation': 'car',
-        'Shopping': 'shopping-bag',
         'Entertainment': 'film',
-        'Bills & Utilities': 'file-invoice-dollar',
+        'Shopping': 'shopping-bag',
+        'Bills': 'file-invoice-dollar',
         'Healthcare': 'medkit',
         'Education': 'graduation-cap',
-        'Travel': 'plane',
         'Other': 'ellipsis-h'
     };
     return icons[category] || 'money-bill-wave';
@@ -369,7 +375,9 @@ async function handleFormSubmit(e) {
         }
         
         if (!response || !response.ok) {
-            throw new Error(`Failed to ${isEditing ? 'update' : 'add'} expense`);
+            const errorText = response ? await response.text() : 'No response';
+            console.error('Server response:', errorText);
+            throw new Error(`Failed to ${isEditing ? 'update' : 'add'} expense: ${errorText}`);
         }
         
         const result = await response.json();
