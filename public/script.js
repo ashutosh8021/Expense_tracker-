@@ -1,13 +1,15 @@
-// Application state
+// Application state - keeping it simple with global variables
 let expenses = [];
 let categories = [];
 let isEditing = false;
 let editingId = null;
 
 // Authentication helper function
+// TODO: Maybe move this to a separate auth.js file later
 function getAuthHeaders() {
     const token = localStorage.getItem('token');
     if (!token) {
+        // No token? Send them back to login
         window.location.href = '/login.html';
         return {};
     }
@@ -18,6 +20,7 @@ function getAuthHeaders() {
 }
 
 // Authenticated fetch wrapper
+// This took me forever to get right - handling token expiry properly
 async function authenticatedFetch(url, options = {}) {
     const headers = getAuthHeaders();
     const config = {
@@ -31,8 +34,9 @@ async function authenticatedFetch(url, options = {}) {
     try {
         const response = await fetch(url, config);
         
+        // Handle expired/invalid tokens
         if (response.status === 401 || response.status === 403) {
-            // Token expired or invalid
+            // Clear everything and start fresh
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/login.html';
@@ -47,6 +51,7 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 // Currency formatting function for Indian Rupees
+// Using Intl API because it handles the formatting beautifully
 function formatCurrency(amount) {
     const num = parseFloat(amount);
     return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -70,30 +75,35 @@ const clearFiltersBtn = document.getElementById('clearFilters');
 const startDateInput = document.getElementById('startDate');
 const endDateInput = document.getElementById('endDate');
 
-// API endpoints
+// API endpoints - keeping it simple
 const API_BASE = '/api/expenses';
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check if user is authenticated
+    // First things first - make sure user is logged in
     const token = localStorage.getItem('token');
     if (!token) {
+        // No token? Off to login you go!
         window.location.href = '/login.html';
         return;
     }
     
-    // Set default date to today
+    // Set default date to today (because that's usually what people want)
     document.getElementById('date').value = new Date().toISOString().split('T')[0];
     
-    // Load initial data
-    await loadCategories();
-    await loadExpenses();
+    // Load initial data - this order matters!
+    await loadCategories();    // Categories first
+    await loadExpenses();      // Then expenses
     
     // Set up event listeners
     setupEventListeners();
     
-    // Update summary
+    // Update summary - show the user their data
     updateSummary();
+    
+    // Just a little debug message for myself 😄
+    console.log('💰 Expense Tracker loaded successfully!');
+    console.log('🚀 Built by Ashutosh with vanilla JS and lots of coffee ☕');
 });
 
 // Set up event listeners
@@ -247,6 +257,7 @@ function updateWeeklyTrends() {
 }
 
 // Update pie chart
+// This was the trickiest part - getting the math right for conic-gradient
 function updatePieChart() {
     const pieChart = document.getElementById('pieChart');
     const pieLegend = document.getElementById('pieLegend');
@@ -255,6 +266,7 @@ function updatePieChart() {
     if (!pieChart || !pieLegend || !pieTotalAmount) return;
     
     if (expenses.length === 0) {
+        // Show empty state when no data
         pieChart.parentElement.parentElement.innerHTML = `
             <div class="pie-empty">
                 <i class="fas fa-chart-pie"></i>
@@ -265,7 +277,7 @@ function updatePieChart() {
         return;
     }
     
-    // Calculate category totals
+    // Calculate category totals - group by category and sum amounts
     const categoryTotals = {};
     let totalAmount = 0;
     
@@ -301,6 +313,7 @@ function updatePieChart() {
     pieTotalAmount.textContent = formatCurrency(totalAmount);
     
     // Generate pie chart using conic-gradient
+    // This CSS magic creates the pie chart without any libraries!
     let currentAngle = 0;
     const gradientStops = [];
     
@@ -309,6 +322,7 @@ function updatePieChart() {
         const startAngle = currentAngle;
         const endAngle = currentAngle + angle;
         
+        // Build the gradient string for each slice
         gradientStops.push(`${item.color} ${startAngle}deg ${endAngle}deg`);
         currentAngle = endAngle;
     });

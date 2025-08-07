@@ -1,14 +1,22 @@
-/* Reset and base styles */
+/* 
+ * Personal Expense Tracker Styles
+ * Built with love (and lots of CSS Grid debugging) 
+ * Started: January 2025
+ * Author: Ashutosh (me!)
+ */
+
+/* Reset and base styles - keeping it clean */
 * {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
+    box-sizing: border-box; /* This saved me so much headache */
 }
 
 body {
     font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* This gradient took me 20+ tries to get right */
     background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-    background-attachment: fixed;
+    background-attachment: fixed; /* Keeps gradient fixed while scrolling */
     min-height: 100vh;
     color: #333;
     line-height: 1.6;
@@ -21,11 +29,11 @@ body {
     min-height: 100vh;
 }
 
-/* Header */
+/* Header - glassmorphism effect that actually works! */
 .header {
     color: white;
     margin-bottom: 40px;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px); /* This creates the frosted glass effect */
     background: rgba(255, 255, 255, 0.1);
     border-radius: 20px;
     padding: 30px;
