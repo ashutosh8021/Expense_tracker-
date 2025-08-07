@@ -3,8 +3,25 @@ const { pool } = require('../database/connection');
 
 const router = express.Router();
 
+// Simple admin authentication middleware
+const adminAuth = (req, res, next) => {
+  const adminKey = req.headers['admin-key'] || req.query.key;
+  const ADMIN_KEY = process.env.ADMIN_KEY || 'your-secret-admin-key-123';
+  
+  // For development, you can bypass this check
+  if (process.env.NODE_ENV === 'development') {
+    return next();
+  }
+  
+  if (adminKey !== ADMIN_KEY) {
+    return res.status(403).json({ error: 'Unauthorized access to analytics' });
+  }
+  
+  next();
+};
+
 // Get user statistics
-router.get('/users/stats', async (req, res) => {
+router.get('/users/stats', adminAuth, async (req, res) => {
   try {
     // Total users
     const totalUsers = await pool.query('SELECT COUNT(*) as count FROM users');
@@ -60,7 +77,7 @@ router.get('/users/stats', async (req, res) => {
 });
 
 // Get expense statistics
-router.get('/expenses/stats', async (req, res) => {
+router.get('/expenses/stats', adminAuth, async (req, res) => {
   try {
     // Total expenses
     const totalExpenses = await pool.query('SELECT COUNT(*) as count FROM expenses');

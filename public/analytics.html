@@ -117,6 +117,9 @@
         <div class="header">
             <h1><i class="fas fa-chart-line"></i> Analytics Dashboard</h1>
             <p>Real-time statistics for your Expense Tracker app</p>
+            <button class="refresh-btn" onclick="logout()" style="position: absolute; top: 20px; right: 20px; padding: 8px 16px;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
         </div>
         
         <div class="stats-grid" id="statsGrid">
@@ -137,7 +140,28 @@
     </div>
 
     <script>
+        // Simple admin authentication
+        const ADMIN_PASSWORD = 'admin123'; // Change this to a secure password
+        
+        // Check if user is authenticated
+        function checkAuth() {
+            const isAuthenticated = sessionStorage.getItem('adminAuth');
+            if (!isAuthenticated) {
+                const password = prompt('Enter admin password to access analytics:');
+                if (password !== ADMIN_PASSWORD) {
+                    alert('Access denied!');
+                    window.location.href = '/';
+                    return false;
+                }
+                sessionStorage.setItem('adminAuth', 'true');
+            }
+            return true;
+        }
+        
         async function loadAnalytics() {
+            // Check authentication first
+            if (!checkAuth()) return;
+            
             const statsGrid = document.getElementById('statsGrid');
             const categoriesChart = document.getElementById('categoriesChart');
             const categoriesList = document.getElementById('categoriesList');
@@ -225,6 +249,12 @@
         
         // Auto-refresh every 5 minutes
         setInterval(loadAnalytics, 300000);
+        
+        // Logout function
+        function logout() {
+            sessionStorage.removeItem('adminAuth');
+            window.location.reload();
+        }
     </script>
 </body>
 </html>
