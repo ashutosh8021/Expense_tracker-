@@ -5,8 +5,6 @@ node_modules/
 Thumbs.db
 
 # Sensitive documentation files
-LINKEDIN_POST.md
-PROJECT_SHOWCASE.md
 ADMIN_ACCESS.md
 ANALYTICS_GUIDE.md
 
