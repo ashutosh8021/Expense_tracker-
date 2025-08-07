@@ -290,6 +290,9 @@
                 document.getElementById('userName').textContent = `Welcome, ${user.name}!`;
             }
             
+            // Track page visit for analytics
+            trackPageVisit('home');
+            
             // Add logout functionality
             document.getElementById('logoutBtn').addEventListener('click', function() {
                 localStorage.removeItem('token');
@@ -297,6 +300,26 @@
                 window.location.href = '/login.html';
             });
         });
+        
+        // Function to track page visits for app usage analytics
+        async function trackPageVisit(page) {
+            try {
+                await fetch('/api/analytics/track/visit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        page: page,
+                        userAgent: navigator.userAgent,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+            } catch (error) {
+                // Silently fail - don't disrupt user experience
+                console.log('Analytics tracking failed:', error);
+            }
+        }
     </script>
 </body>
 </html>

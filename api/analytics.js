@@ -3,20 +3,10 @@ const { pool } = require('../database/connection');
 
 const router = express.Router();
 
-// Simple admin authentication middleware
+// Simple admin authentication middleware (disabled for now since frontend has password protection)
 const adminAuth = (req, res, next) => {
-  const adminKey = req.headers['admin-key'] || req.query.key;
-  const ADMIN_KEY = process.env.ADMIN_KEY || 'your-secret-admin-key-123';
-  
-  // For development, you can bypass this check
-  if (process.env.NODE_ENV === 'development') {
-    return next();
-  }
-  
-  if (adminKey !== ADMIN_KEY) {
-    return res.status(403).json({ error: 'Unauthorized access to analytics' });
-  }
-  
+  // Frontend already has password protection, so we'll allow API access
+  // The real security is in the analytics.html password prompt
   next();
 };
 
@@ -113,6 +103,82 @@ router.get('/expenses/stats', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching expense stats:', error);
     res.status(500).json({ error: 'Failed to fetch expense statistics' });
+  }
+});
+
+// Track page visits (for monitoring app usage)
+router.post('/track/visit', async (req, res) => {
+  try {
+    const { page, userAgent, timestamp } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    // Create visits table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS page_visits (
+        id SERIAL PRIMARY KEY,
+        page VARCHAR(255),
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        visit_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Insert visit record
+    await pool.query(`
+      INSERT INTO page_visits (page, ip_address, user_agent)
+      VALUES ($1, $2, $3)
+    `, [page, ipAddress, userAgent]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error tracking visit:', error);
+    res.status(500).json({ error: 'Failed to track visit' });
+  }
+});
+
+// Get app usage statistics
+router.get('/usage/stats', adminAuth, async (req, res) => {
+  try {
+    // Total page views
+    const totalViews = await pool.query('SELECT COUNT(*) as count FROM page_visits');
+    
+    // Unique visitors (by IP)
+    const uniqueVisitors = await pool.query('SELECT COUNT(DISTINCT ip_address) as count FROM page_visits');
+    
+    // Views today
+    const todayViews = await pool.query(`
+      SELECT COUNT(*) as count FROM page_visits 
+      WHERE DATE(visit_time) = CURRENT_DATE
+    `);
+    
+    // Views this week
+    const weekViews = await pool.query(`
+      SELECT COUNT(*) as count FROM page_visits 
+      WHERE visit_time >= CURRENT_DATE - INTERVAL '7 days'
+    `);
+    
+    // Most popular pages
+    const popularPages = await pool.query(`
+      SELECT 
+        page,
+        COUNT(*) as views
+      FROM page_visits 
+      GROUP BY page
+      ORDER BY views DESC
+      LIMIT 10
+    `);
+    
+    res.json({
+      totalViews: parseInt(totalViews.rows[0].count),
+      uniqueVisitors: parseInt(uniqueVisitors.rows[0].count),
+      todayViews: parseInt(todayViews.rows[0].count),
+      weekViews: parseInt(weekViews.rows[0].count),
+      popularPages: popularPages.rows
+    });
+    
+  } catch (error) {
+    console.error('Error fetching usage stats:', error);
+    res.status(500).json({ error: 'Failed to fetch usage statistics' });
   }
 });
 

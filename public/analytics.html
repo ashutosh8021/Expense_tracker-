@@ -178,6 +178,10 @@
                 const expenseResponse = await fetch('/api/analytics/expenses/stats');
                 const expenseData = await expenseResponse.json();
                 
+                // Fetch usage stats
+                const usageResponse = await fetch('/api/analytics/usage/stats');
+                const usageData = await usageResponse.json();
+                
                 // Display user statistics
                 statsGrid.innerHTML = `
                     <div class="stat-card">
@@ -204,6 +208,21 @@
                         <h3>Active Users</h3>
                         <div class="stat-value">${userData.activeUsers}</div>
                         <div class="stat-label">Active in last 7 days</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Page Views</h3>
+                        <div class="stat-value">${usageData.totalViews.toLocaleString()}</div>
+                        <div class="stat-label">App visits</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Unique Visitors</h3>
+                        <div class="stat-value">${usageData.uniqueVisitors}</div>
+                        <div class="stat-label">Different people using app</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Views Today</h3>
+                        <div class="stat-value">${usageData.todayViews}</div>
+                        <div class="stat-label">Today's visits</div>
                     </div>
                     <div class="stat-card">
                         <h3>Total Expenses</h3>
@@ -239,13 +258,38 @@
                     <div class="loading">
                         <i class="fas fa-exclamation-triangle"></i>
                         <p>Error loading analytics. Please try again.</p>
+                        <p style="font-size: 12px; margin-top: 10px;">Error: ${error.message}</p>
                     </div>
                 `;
             }
         }
         
         // Load analytics on page load
-        document.addEventListener('DOMContentLoaded', loadAnalytics);
+        document.addEventListener('DOMContentLoaded', () => {
+            // Track analytics page visit
+            trackPageVisit('analytics');
+            loadAnalytics();
+        });
+        
+        // Track page visit for usage analytics
+        async function trackPageVisit(page) {
+            try {
+                await fetch('/api/analytics/track/visit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        page: page,
+                        userAgent: navigator.userAgent,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+            } catch (error) {
+                // Silently fail - don't disrupt user experience
+                console.log('Analytics tracking failed:', error);
+            }
+        }
         
         // Auto-refresh every 5 minutes
         setInterval(loadAnalytics, 300000);
