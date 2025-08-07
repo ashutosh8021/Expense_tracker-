@@ -66,6 +66,65 @@ router.get('/users/stats', adminAuth, async (req, res) => {
   }
 });
 
+// Get detailed user information for admin
+router.get('/users/details', adminAuth, async (req, res) => {
+  try {
+    // Recent users (last 50)
+    const recentUsers = await pool.query(`
+      SELECT 
+        id,
+        name,
+        email,
+        created_at,
+        (SELECT COUNT(*) FROM expenses WHERE user_id = users.id) as expense_count,
+        (SELECT SUM(amount) FROM expenses WHERE user_id = users.id) as total_spent
+      FROM users 
+      ORDER BY created_at DESC 
+      LIMIT 50
+    `);
+    
+    // Most active users (by expense count)
+    const activeUsers = await pool.query(`
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.created_at,
+        COUNT(e.id) as expense_count,
+        COALESCE(SUM(e.amount), 0) as total_spent,
+        MAX(e.created_at) as last_expense
+      FROM users u
+      LEFT JOIN expenses e ON u.id = e.user_id
+      GROUP BY u.id, u.name, u.email, u.created_at
+      HAVING COUNT(e.id) > 0
+      ORDER BY expense_count DESC
+      LIMIT 20
+    `);
+    
+    // Users by signup date
+    const usersByDate = await pool.query(`
+      SELECT 
+        DATE(created_at) as signup_date,
+        COUNT(*) as signups,
+        string_agg(name, ', ') as user_names
+      FROM users 
+      WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY DATE(created_at)
+      ORDER BY signup_date DESC
+    `);
+    
+    res.json({
+      recentUsers: recentUsers.rows,
+      activeUsers: activeUsers.rows,
+      usersByDate: usersByDate.rows
+    });
+    
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({ error: 'Failed to fetch user details' });
+  }
+});
+
 // Get expense statistics
 router.get('/expenses/stats', adminAuth, async (req, res) => {
   try {

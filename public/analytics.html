@@ -110,6 +110,79 @@
             font-size: 18px;
             color: white;
         }
+        
+        .user-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn.active, .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .user-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 3px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .user-item h4 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            color: #fff;
+        }
+        
+        .user-item .user-email {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+        
+        .user-item .user-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            opacity: 0.7;
+        }
+        
+        .user-grid {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .date-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .date-item .date {
+            font-weight: bold;
+            font-size: 13px;
+        }
+        
+        .date-item .count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -132,6 +205,16 @@
         <div class="chart-container" id="categoriesChart" style="display: none;">
             <h3><i class="fas fa-chart-pie"></i> Popular Categories</h3>
             <div id="categoriesList"></div>
+        </div>
+        
+        <div class="chart-container" id="userDetailsChart" style="display: none;">
+            <h3><i class="fas fa-users"></i> User Details</h3>
+            <div class="user-tabs">
+                <button class="tab-btn active" onclick="showUserTab('recent')">Recent Users</button>
+                <button class="tab-btn" onclick="showUserTab('active')">Most Active</button>
+                <button class="tab-btn" onclick="showUserTab('daily')">Daily Signups</button>
+            </div>
+            <div id="userDetailsList"></div>
         </div>
         
         <button class="refresh-btn" onclick="loadAnalytics()">
@@ -165,22 +248,27 @@
             const statsGrid = document.getElementById('statsGrid');
             const categoriesChart = document.getElementById('categoriesChart');
             const categoriesList = document.getElementById('categoriesList');
+            const userDetailsChart = document.getElementById('userDetailsChart');
             
             try {
                 // Show loading
                 statsGrid.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Loading analytics...</p></div>';
                 
-                // Fetch user stats
-                const userResponse = await fetch('/api/analytics/users/stats');
+                // Fetch all data in parallel
+                const [userResponse, expenseResponse, usageResponse, userDetailsResponse] = await Promise.all([
+                    fetch('/api/analytics/users/stats'),
+                    fetch('/api/analytics/expenses/stats'),
+                    fetch('/api/analytics/usage/stats'),
+                    fetch('/api/analytics/users/details')
+                ]);
+                
                 const userData = await userResponse.json();
-                
-                // Fetch expense stats
-                const expenseResponse = await fetch('/api/analytics/expenses/stats');
                 const expenseData = await expenseResponse.json();
-                
-                // Fetch usage stats
-                const usageResponse = await fetch('/api/analytics/usage/stats');
                 const usageData = await usageResponse.json();
+                const userDetails = await userDetailsResponse.json();
+                
+                // Store user details globally for tab switching
+                window.userDetailsData = userDetails;
                 
                 // Display user statistics
                 statsGrid.innerHTML = `
@@ -252,6 +340,10 @@
                     `).join('');
                 }
                 
+                // Show user details section
+                userDetailsChart.style.display = 'block';
+                showUserTab('recent'); // Default to recent users
+                
             } catch (error) {
                 console.error('Error loading analytics:', error);
                 statsGrid.innerHTML = `
@@ -262,6 +354,64 @@
                     </div>
                 `;
             }
+        }
+        
+        // Function to switch between user detail tabs
+        function showUserTab(tabType) {
+            const userDetailsList = document.getElementById('userDetailsList');
+            const tabs = document.querySelectorAll('.tab-btn');
+            const userData = window.userDetailsData;
+            
+            if (!userData) return;
+            
+            // Update active tab
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            let content = '';
+            
+            switch(tabType) {
+                case 'recent':
+                    content = '<div class="user-grid">' + userData.recentUsers.map(user => `
+                        <div class="user-item">
+                            <h4>${user.name || 'Anonymous'}</h4>
+                            <div class="user-email">${user.email}</div>
+                            <div class="user-stats">
+                                <span>Joined: ${new Date(user.created_at).toLocaleDateString()}</span>
+                                <span>${user.expense_count} expenses • ₹${parseFloat(user.total_spent || 0).toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `).join('') + '</div>';
+                    break;
+                    
+                case 'active':
+                    content = '<div class="user-grid">' + userData.activeUsers.map(user => `
+                        <div class="user-item">
+                            <h4>${user.name || 'Anonymous'}</h4>
+                            <div class="user-email">${user.email}</div>
+                            <div class="user-stats">
+                                <span>${user.expense_count} expenses</span>
+                                <span>₹${parseFloat(user.total_spent).toLocaleString()} spent</span>
+                                <span>Last: ${new Date(user.last_expense).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    `).join('') + '</div>';
+                    break;
+                    
+                case 'daily':
+                    content = userData.usersByDate.map(day => `
+                        <div class="date-item">
+                            <div>
+                                <div class="date">${new Date(day.signup_date).toLocaleDateString()}</div>
+                                <div style="font-size: 11px; opacity: 0.7; margin-top: 2px;">${day.user_names}</div>
+                            </div>
+                            <div class="count">${day.signups} signups</div>
+                        </div>
+                    `).join('');
+                    break;
+            }
+            
+            userDetailsList.innerHTML = content;
         }
         
         // Load analytics on page load
