@@ -3,3 +3,13 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Sensitive documentation files
+LINKEDIN_POST.md
+PROJECT_SHOWCASE.md
+ADMIN_ACCESS.md
+ANALYTICS_GUIDE.md
+
+# Private files
+*.private.md
+admin-credentials.txt
