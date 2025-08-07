@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - Expense Tracker</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            color: white;
+            text-align: center;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 20px;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> Analytics Dashboard</h1>
+            <p>Real-time statistics for your Expense Tracker app</p>
+        </div>
+        
+        <div class="stats-grid" id="statsGrid">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading analytics...</p>
+            </div>
+        </div>
+        
+        <div class="chart-container" id="categoriesChart" style="display: none;">
+            <h3><i class="fas fa-chart-pie"></i> Popular Categories</h3>
+            <div id="categoriesList"></div>
+        </div>
+        
+        <button class="refresh-btn" onclick="loadAnalytics()">
+            <i class="fas fa-sync-alt"></i> Refresh Data
+        </button>
+    </div>
+
+    <script>
+        async function loadAnalytics() {
+            const statsGrid = document.getElementById('statsGrid');
+            const categoriesChart = document.getElementById('categoriesChart');
+            const categoriesList = document.getElementById('categoriesList');
+            
+            try {
+                // Show loading
+                statsGrid.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Loading analytics...</p></div>';
+                
+                // Fetch user stats
+                const userResponse = await fetch('/api/analytics/users/stats');
+                const userData = await userResponse.json();
+                
+                // Fetch expense stats
+                const expenseResponse = await fetch('/api/analytics/expenses/stats');
+                const expenseData = await expenseResponse.json();
+                
+                // Display user statistics
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <h3>Total Users</h3>
+                        <div class="stat-value">${userData.totalUsers.toLocaleString()}</div>
+                        <div class="stat-label">All time signups</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>New Today</h3>
+                        <div class="stat-value">${userData.todayUsers}</div>
+                        <div class="stat-label">Signups today</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>This Week</h3>
+                        <div class="stat-value">${userData.weekUsers}</div>
+                        <div class="stat-label">New users this week</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>This Month</h3>
+                        <div class="stat-value">${userData.monthUsers}</div>
+                        <div class="stat-label">Monthly signups</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Users</h3>
+                        <div class="stat-value">${userData.activeUsers}</div>
+                        <div class="stat-label">Active in last 7 days</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Expenses</h3>
+                        <div class="stat-value">${expenseData.totalExpenses.toLocaleString()}</div>
+                        <div class="stat-label">All recorded expenses</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Amount</h3>
+                        <div class="stat-value">₹${expenseData.totalAmount.toLocaleString()}</div>
+                        <div class="stat-label">Total money tracked</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Expenses Today</h3>
+                        <div class="stat-value">${expenseData.todayExpenses}</div>
+                        <div class="stat-label">Added today</div>
+                    </div>
+                `;
+                
+                // Display popular categories
+                if (expenseData.popularCategories && expenseData.popularCategories.length > 0) {
+                    categoriesChart.style.display = 'block';
+                    categoriesList.innerHTML = expenseData.popularCategories.map(category => `
+                        <div class="category-item">
+                            <span>${category.category}</span>
+                            <span>${category.usage_count} uses • ₹${parseFloat(category.total_amount).toLocaleString()}</span>
+                        </div>
+                    `).join('');
+                }
+                
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                statsGrid.innerHTML = `
+                    <div class="loading">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error loading analytics. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load analytics on page load
+        document.addEventListener('DOMContentLoaded', loadAnalytics);
+        
+        // Auto-refresh every 5 minutes
+        setInterval(loadAnalytics, 300000);
+    </script>
+</body>
+</html>

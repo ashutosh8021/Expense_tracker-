@@ -162,6 +162,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Import analytics routes
+const analyticsRoutes = require('./analytics');
+app.use('/api/analytics', analyticsRoutes);
+
 // Auth middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
