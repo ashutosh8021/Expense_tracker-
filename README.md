@@ -4,7 +4,7 @@
 [![Status](https://img.shields.io/badge/Status-Works_On_My_Machine-brightgreen?style=for-the-badge)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)]()
 
-Started this project because I was tired of using Excel sheets to track my expenses! 😅 What began as a simple weekend project turned into a full-featured expense tracker with charts, authentication, and everything.
+Started this project because I was tired of using Excel sheets to track my expenses! 😅 What began as a simple weekend project turned into a full-featured expense tracker in just a week.
 
 **Built with vanilla JavaScript** because I wanted to really understand how everything works without relying on heavy frameworks.
 
@@ -12,27 +12,25 @@ Started this project because I was tired of using Excel sheets to track my expen
 
 ## 🚀 My Development Journey
 
-### **Week 1: The HTML/CSS Struggle** 😵
-- Started with basic HTML form (looked terrible!)
-- Spent entire Saturday fighting with CSS flexbox
-- Finally got a decent-looking layout after way too many tries
+### **Day 1-2: Frontend Setup** �
+- Built HTML structure and basic CSS (spent way too long on flexbox!)
+- Added expense form and basic styling
+- Made it responsive for mobile
 
-### **Week 2: JavaScript Hell** 🔥
+### **Day 3-4: JavaScript Magic** ✨
 - Added expense tracking functionality
-- Broke everything multiple times trying to add charts
-- Discovered CSS conic-gradient for pie charts (game changer!)
-- Authentication took me 3 days to implement correctly
+- Implemented pie charts with CSS conic-gradient (took forever to get the math right!)
+- Added real-time updates and animations
 
-### **Week 3: Database Nightmares** 😰
-- Initially used localStorage (obviously not scalable)
-- Learned PostgreSQL and Supabase integration
-- Database schema changes broke everything twice
-- Finally got user isolation working properly
+### **Day 5-6: Backend & Database** �️
+- Set up Express.js server and PostgreSQL
+- Implemented JWT authentication (harder than expected!)
+- Connected everything to Supabase
 
-### **Week 4: Deployment Drama** 🎭
-- Vercel deployment failed 5 times (environment variables are tricky!)
-- CORS issues made me question my life choices
-- But it finally works! 🎉
+### **Day 7: Deployment** 🚀
+- Deployed to Vercel (took 3 attempts to get environment variables right!)
+- Fixed CORS issues and mobile bugs
+- Finally live and working! 🎉
 
 ---
 

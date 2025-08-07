@@ -2,30 +2,29 @@
 
 ## 📅 Development Timeline
 
-### Week 1: HTML/CSS Foundation (Jan 15-21, 2025)
-- ✅ Created basic HTML structure
-- ✅ Fought with CSS flexbox for hours (finally got it working!)
-- ✅ Added responsive design (tested on my phone)
-- ❌ First attempt at animations looked terrible
+### Day 1-2: Frontend Foundation (Aug 5-6, 2025)
+- ✅ Created HTML structure and basic CSS
+- ✅ Added expense form with validation
+- ✅ Made it responsive (tested on phone)
+- ❌ First CSS animations looked janky
 
-### Week 2: JavaScript Functionality (Jan 22-28, 2025)
-- ✅ Added expense form handling
-- ✅ Implemented local storage (temporary solution)
-- ✅ Created pie chart with CSS conic-gradient (took 2 days!)
-- ❌ Authentication attempt #1 failed miserably
+### Day 3-4: JavaScript Functionality (Aug 7-8, 2025)  
+- ✅ Added expense CRUD operations
+- ✅ Implemented pie charts with CSS conic-gradient
+- ✅ Added real-time updates and filtering
+- ❌ Authentication took longer than expected
 
-### Week 3: Backend & Database (Jan 29 - Feb 4, 2025)
-- ✅ Set up Express.js server
-- ✅ Connected to PostgreSQL (Supabase)
-- ✅ Implemented JWT authentication (finally!)
-- ✅ Added user isolation for expenses
-- ❌ Database schema changes broke everything twice
+### Day 5-6: Backend & Database (Aug 9-10, 2025)
+- ✅ Set up Express.js API server
+- ✅ Connected PostgreSQL with Supabase
+- ✅ Implemented JWT authentication
+- ✅ Added user data isolation
 
-### Week 4: Deployment & Polish (Feb 5-11, 2025)
-- ✅ Deployed to Vercel (5 failed attempts first)
-- ✅ Fixed CORS issues
+### Day 7: Deployment & Polish (Aug 11, 2025)
+- ✅ Deployed to Vercel successfully
+- ✅ Fixed environment variable issues
 - ✅ Added loading states and error handling
-- ✅ Mobile testing and fixes
+- ✅ Mobile testing and final touches
 
 ---
 
@@ -143,5 +142,5 @@
 ---
 
 *Last updated: August 7, 2025*
-*Development time: ~60 hours over 4 weeks*
-*Coffee consumed: Probably too much ☕*
+*Development time: ~25-30 hours over 7 days*
+*Coffee consumed: Just the right amount ☕*
