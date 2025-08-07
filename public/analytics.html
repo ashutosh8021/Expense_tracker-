@@ -262,10 +262,20 @@
                     fetch('/api/analytics/users/details')
                 ]);
                 
+                // Check if all responses are ok
+                if (!userResponse.ok || !expenseResponse.ok || !usageResponse.ok || !userDetailsResponse.ok) {
+                    throw new Error('Failed to fetch one or more analytics endpoints');
+                }
+                
                 const userData = await userResponse.json();
                 const expenseData = await expenseResponse.json();
                 const usageData = await usageResponse.json();
                 const userDetails = await userDetailsResponse.json();
+                
+                // Validate data structure
+                if (!userData || !expenseData || !usageData || !userDetails) {
+                    throw new Error('Invalid data received from server');
+                }
                 
                 // Store user details globally for tab switching
                 window.userDetailsData = userDetails;
@@ -274,57 +284,57 @@
                 statsGrid.innerHTML = `
                     <div class="stat-card">
                         <h3>Total Users</h3>
-                        <div class="stat-value">${userData.totalUsers.toLocaleString()}</div>
+                        <div class="stat-value">${(userData.totalUsers || 0).toLocaleString()}</div>
                         <div class="stat-label">All time signups</div>
                     </div>
                     <div class="stat-card">
                         <h3>New Today</h3>
-                        <div class="stat-value">${userData.todayUsers}</div>
+                        <div class="stat-value">${userData.todayUsers || 0}</div>
                         <div class="stat-label">Signups today</div>
                     </div>
                     <div class="stat-card">
                         <h3>This Week</h3>
-                        <div class="stat-value">${userData.weekUsers}</div>
+                        <div class="stat-value">${userData.weekUsers || 0}</div>
                         <div class="stat-label">New users this week</div>
                     </div>
                     <div class="stat-card">
                         <h3>This Month</h3>
-                        <div class="stat-value">${userData.monthUsers}</div>
+                        <div class="stat-value">${userData.monthUsers || 0}</div>
                         <div class="stat-label">Monthly signups</div>
                     </div>
                     <div class="stat-card">
                         <h3>Active Users</h3>
-                        <div class="stat-value">${userData.activeUsers}</div>
+                        <div class="stat-value">${userData.activeUsers || 0}</div>
                         <div class="stat-label">Active in last 7 days</div>
                     </div>
                     <div class="stat-card">
                         <h3>Total Page Views</h3>
-                        <div class="stat-value">${usageData.totalViews.toLocaleString()}</div>
+                        <div class="stat-value">${(usageData.totalViews || 0).toLocaleString()}</div>
                         <div class="stat-label">App visits</div>
                     </div>
                     <div class="stat-card">
                         <h3>Unique Visitors</h3>
-                        <div class="stat-value">${usageData.uniqueVisitors}</div>
+                        <div class="stat-value">${usageData.uniqueVisitors || 0}</div>
                         <div class="stat-label">Different people using app</div>
                     </div>
                     <div class="stat-card">
                         <h3>Views Today</h3>
-                        <div class="stat-value">${usageData.todayViews}</div>
+                        <div class="stat-value">${usageData.todayViews || 0}</div>
                         <div class="stat-label">Today's visits</div>
                     </div>
                     <div class="stat-card">
                         <h3>Total Expenses</h3>
-                        <div class="stat-value">${expenseData.totalExpenses.toLocaleString()}</div>
+                        <div class="stat-value">${(expenseData.totalExpenses || 0).toLocaleString()}</div>
                         <div class="stat-label">All recorded expenses</div>
                     </div>
                     <div class="stat-card">
                         <h3>Total Amount</h3>
-                        <div class="stat-value">₹${expenseData.totalAmount.toLocaleString()}</div>
+                        <div class="stat-value">₹${(expenseData.totalAmount || 0).toLocaleString()}</div>
                         <div class="stat-label">Total money tracked</div>
                     </div>
                     <div class="stat-card">
                         <h3>Expenses Today</h3>
-                        <div class="stat-value">${expenseData.todayExpenses}</div>
+                        <div class="stat-value">${expenseData.todayExpenses || 0}</div>
                         <div class="stat-label">Added today</div>
                     </div>
                 `;
@@ -364,9 +374,16 @@
             
             if (!userData) return;
             
-            // Update active tab
-            tabs.forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
+            // Update active tab - find the clicked tab by tabType
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.textContent.toLowerCase().includes(tabType.toLowerCase()) || 
+                    (tabType === 'recent' && tab.textContent.includes('Recent')) ||
+                    (tabType === 'active' && tab.textContent.includes('Most Active')) ||
+                    (tabType === 'daily' && tab.textContent.includes('Daily'))) {
+                    tab.classList.add('active');
+                }
+            });
             
             let content = '';
             
