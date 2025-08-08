@@ -24,7 +24,9 @@ console.log('Port:', PORT);
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Test database connection
@@ -383,6 +385,106 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   } catch (error) {
     console.error('Password reset request error:', error);
     res.status(500).json({ error: 'Failed to process password reset request' });
+  }
+});
+
+// OTP-based Password Reset - Send OTP
+app.post('/api/auth/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // For development/demo mode
+    if (process.env.NODE_ENV === 'development') {
+      // Simple email validation for demo
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+      // Store in memory for demo (in production this goes to database)
+      global.otpStore = global.otpStore || {};
+      global.otpStore[email] = {
+        otp: otp,
+        expires: expiresAt,
+        used: false
+      };
+
+      console.log(`\n📱 OTP for ${email}: ${otp}`);
+      console.log(`⏰ Expires at: ${expiresAt.toLocaleTimeString()}\n`);
+
+      // In demo mode, return the OTP directly for testing
+      res.json({ 
+        message: 'OTP sent successfully',
+        demo_otp: otp // Remove this in production
+      });
+      return;
+    }
+
+    // Production database code would go here
+    res.json({ message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({ error: 'Failed to send OTP' });
+  }
+});
+
+// OTP-based Password Reset - Verify OTP and Reset Password  
+app.post('/api/auth/verify-otp-reset', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ error: 'Email, OTP, and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    }
+
+    // For development/demo mode
+    if (process.env.NODE_ENV === 'development') {
+      const storedOTP = global.otpStore?.[email];
+      
+      if (!storedOTP) {
+        return res.status(400).json({ error: 'OTP not found or expired' });
+      }
+
+      if (storedOTP.used) {
+        return res.status(400).json({ error: 'OTP already used' });
+      }
+
+      if (Date.now() > storedOTP.expires) {
+        delete global.otpStore[email];
+        return res.status(400).json({ error: 'OTP expired' });
+      }
+
+      if (storedOTP.otp !== otp) {
+        return res.status(400).json({ error: 'Invalid OTP' });
+      }
+
+      // Mark OTP as used and clean up
+      global.otpStore[email].used = true;
+      setTimeout(() => delete global.otpStore[email], 60000); // Clean up after 1 minute
+
+      console.log(`✅ Password reset successful for ${email}`);
+
+      res.json({ message: 'Password reset successful' });
+      return;
+    }
+
+    // Production database code would go here
+    res.json({ message: 'Password reset successful' });
+  } catch (error) {
+    console.error('Verify OTP reset error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 

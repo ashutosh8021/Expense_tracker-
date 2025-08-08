@@ -99,6 +99,27 @@
             text-decoration: underline;
         }
 
+        /* OTP Input Styling */
+        #otp-input {
+            text-align: center;
+            font-size: 1.2em;
+            letter-spacing: 0.5em;
+            font-weight: bold;
+        }
+
+        /* Secondary Button Styling */
+        .btn.secondary {
+            background: transparent;
+            border: 1px solid #667eea;
+            color: #667eea;
+            margin-top: 10px;
+        }
+
+        .btn.secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
         .error {
             background: #fee;
             color: #c33;
@@ -155,7 +176,28 @@
                 <label for="forgot-email">Email Address</label>
                 <input type="email" id="forgot-email" required placeholder="Enter your email address">
             </div>
-            <button type="submit" class="btn">Send Reset Link</button>
+            <button type="submit" class="btn">Send OTP</button>
+            <div class="toggle-form">
+                <a href="#" onclick="showLogin()">Back to Login</a>
+            </div>
+        </form>
+
+        <!-- OTP Verification Form -->
+        <form id="otp-verification-form" style="display: none;">
+            <div class="form-group">
+                <label for="otp-input">Enter OTP</label>
+                <input type="text" id="otp-input" required placeholder="Enter 6-digit OTP" maxlength="6" style="text-align: center; font-size: 1.2em; letter-spacing: 0.5em; font-weight: bold;">
+            </div>
+            <div class="form-group">
+                <label for="new-password">New Password</label>
+                <input type="password" id="new-password" required placeholder="Enter new password" minlength="6">
+            </div>
+            <div class="form-group">
+                <label for="confirm-password">Confirm New Password</label>
+                <input type="password" id="confirm-password" required placeholder="Confirm new password" minlength="6">
+            </div>
+            <button type="submit" class="btn">Reset Password</button>
+            <button type="button" class="btn secondary" onclick="resendOTP()">Resend OTP</button>
             <div class="toggle-form">
                 <a href="#" onclick="showLogin()">Back to Login</a>
             </div>
@@ -279,12 +321,24 @@
             }
         });
 
+        // Global variables for OTP functionality
+        let currentResetEmail = '';
+
         // Forgot Password Functions
         function showForgotPassword() {
             document.getElementById('login-form').style.display = 'none';
             document.getElementById('signup-form').style.display = 'none';
             document.getElementById('forgot-password-form').style.display = 'block';
+            document.getElementById('otp-verification-form').style.display = 'none';
             document.querySelector('.login-header p').textContent = 'Reset your password';
+            clearMessage();
+        }
+
+        function showOTPVerification(email) {
+            document.getElementById('forgot-password-form').style.display = 'none';
+            document.getElementById('otp-verification-form').style.display = 'block';
+            document.querySelector('.login-header p').textContent = 'Verify OTP and set new password';
+            currentResetEmail = email;
             clearMessage();
         }
 
@@ -292,19 +346,25 @@
             document.getElementById('login-form').style.display = 'block';
             document.getElementById('signup-form').style.display = 'none';
             document.getElementById('forgot-password-form').style.display = 'none';
+            document.getElementById('otp-verification-form').style.display = 'none';
             document.querySelector('.login-header p').textContent = 'Manage your personal finances';
             isSignupMode = false;
             clearMessage();
         }
 
-        // Forgot Password Form Handler
+        // Forgot Password Form Handler - Send OTP
         document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const email = document.getElementById('forgot-email').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending OTP...';
             
             try {
-                const response = await fetch('/api/auth/forgot-password', {
+                const response = await fetch('/api/auth/send-otp', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -315,15 +375,126 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showMessage('If this email exists, you will receive a password reset link within a few minutes. Please check your email inbox and spam folder.', 'success');
-                    document.getElementById('forgot-email').value = '';
+                    // Show success message
+                    showMessage(`OTP sent to ${email}. Please check your email.`, 'success');
+                    
+                    // For demo mode, show OTP if provided
+                    if (data.demo_otp) {
+                        console.log(`Demo OTP: ${data.demo_otp}`);
+                        alert(`Demo Mode: Your OTP is ${data.demo_otp}\n\nIn production, this would be sent via email.`);
+                    }
+                    
+                    // Show OTP verification form
+                    setTimeout(() => {
+                        showOTPVerification(email);
+                    }, 2000);
                 } else {
-                    showMessage(data.error || 'Failed to send reset email');
+                    showMessage(data.error || 'Failed to send OTP', 'error');
                 }
             } catch (error) {
-                showMessage('Network error. Please try again.');
+                console.error('Send OTP error:', error);
+                showMessage('Network error. Please try again.', 'error');
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send OTP';
             }
         });
+
+        // OTP Verification and Password Reset Handler
+        document.getElementById('otp-verification-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const enteredOTP = document.getElementById('otp-input').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            if (!enteredOTP || !newPassword || !confirmPassword) {
+                showMessage('Please fill all fields', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showMessage('Passwords do not match', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showMessage('Password must be at least 6 characters long', 'error');
+                return;
+            }
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Resetting Password...';
+            
+            try {
+                const response = await fetch('/api/auth/verify-otp-reset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: currentResetEmail,
+                        otp: enteredOTP,
+                        newPassword: newPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Password reset successfully! You can now login with your new password.', 'success');
+                    
+                    // Clear form and show login after delay
+                    setTimeout(() => {
+                        document.getElementById('otp-input').value = '';
+                        document.getElementById('new-password').value = '';
+                        document.getElementById('confirm-password').value = '';
+                        showLogin();
+                    }, 3000);
+                } else {
+                    showMessage(data.error || 'Failed to reset password', 'error');
+                }
+            } catch (error) {
+                console.error('Verify OTP error:', error);
+                showMessage('Network error. Please try again.', 'error');
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Reset Password';
+            }
+        });
+
+        // Resend OTP function
+        function resendOTP() {
+            if (!currentResetEmail) {
+                showMessage('No email found. Please start over.', 'error');
+                return;
+            }
+            
+            // Trigger the send OTP API again
+            fetch('/api/auth/send-otp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email: currentResetEmail })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.demo_otp) {
+                    console.log(`New Demo OTP: ${data.demo_otp}`);
+                    alert(`Demo Mode: Your new OTP is ${data.demo_otp}\n\nIn production, this would be sent via email.`);
+                }
+                showMessage(`New OTP sent to ${currentResetEmail}`, 'success');
+            })
+            .catch(error => {
+                console.error('Resend OTP error:', error);
+                showMessage('Failed to resend OTP. Please try again.', 'error');
+            });
+        }
 
         // Check if user is already logged in
         if (localStorage.getItem('token')) {
