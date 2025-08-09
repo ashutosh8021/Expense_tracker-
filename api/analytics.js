@@ -1,5 +1,13 @@
 const express = require('express');
-const { pool } = require('../database/connection');
+const { Pool } = require('pg');
+
+// Create database connection (same as server.js)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 const router = express.Router();
 
