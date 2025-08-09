@@ -428,6 +428,60 @@ app.post('/api/auth/send-otp', async (req, res) => {
       return;
     }
 
+    // Production Mode - Full OTP Implementation
+    console.log(`🔍 Checking if user exists: ${email}`);
+    
+    // Check if user exists
+    const userResult = await pool.query('SELECT id, name FROM users WHERE email = $1', [email]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'No account found with this email address' });
+    }
+
+    const user = userResult.rows[0];
+    console.log(`✅ User found: ${user.name} (ID: ${user.id})`);
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    console.log(`📱 Generated OTP: ${otp} for ${email}`);
+
+    // Store OTP in database
+    await pool.query(`
+      INSERT INTO password_reset_tokens (email, token, expires_at, used) 
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (email) 
+      DO UPDATE SET token = $2, expires_at = $3, used = $4, created_at = CURRENT_TIMESTAMP
+    `, [email, otp, expiresAt, false]);
+
+    console.log('💾 OTP stored in database');
+
+    // Send OTP via email
+    console.log('📧 Sending OTP email...');
+    
+    const mailOptions = {
+      from: process.env.FROM_EMAIL,
+      to: email,
+      subject: 'Password Reset OTP - Expense Tracker',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #667eea; text-align: center;">Password Reset OTP</h2>
+          <div style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 30px; border-radius: 15px; text-align: center; margin: 20px 0;">
+            <h1 style="color: white; font-size: 2.5rem; margin: 0; letter-spacing: 0.5rem;">${otp}</h1>
+          </div>
+          <p style="font-size: 16px; line-height: 1.6;">Hi ${user.name},</p>
+          <p style="font-size: 16px; line-height: 1.6;">You requested to reset your password. Use the OTP above to reset your password.</p>
+          <p style="font-size: 14px; color: #666;">This OTP will expire in 5 minutes.</p>
+          <p style="font-size: 14px; color: #666;">If you didn't request this, please ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 12px; color: #999; text-align: center;">Expense Tracker App</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ OTP email sent successfully');
+
     // Production database code would go here
     res.json({ message: 'OTP sent successfully' });
   } catch (error) {
@@ -479,6 +533,70 @@ app.post('/api/auth/verify-otp-reset', async (req, res) => {
       res.json({ message: 'Password reset successful' });
       return;
     }
+
+    // Production Mode - Full OTP Verification
+    console.log(`🔍 Verifying OTP for ${email}: ${otp}`);
+
+    // Get stored OTP from database
+    const otpResult = await pool.query(`
+      SELECT token, expires_at, used 
+      FROM password_reset_tokens 
+      WHERE email = $1
+    `, [email]);
+
+    if (otpResult.rows.length === 0) {
+      console.log('❌ No OTP found in database');
+      return res.status(400).json({ error: 'OTP not found or expired' });
+    }
+
+    const storedOTP = otpResult.rows[0];
+
+    // Check if OTP is already used
+    if (storedOTP.used) {
+      console.log('❌ OTP already used');
+      return res.status(400).json({ error: 'OTP already used' });
+    }
+
+    // Check if OTP is expired
+    if (new Date() > new Date(storedOTP.expires_at)) {
+      console.log('❌ OTP expired');
+      // Clean up expired OTP
+      await pool.query('DELETE FROM password_reset_tokens WHERE email = $1', [email]);
+      return res.status(400).json({ error: 'OTP expired' });
+    }
+
+    // Check if OTP matches
+    if (storedOTP.token !== otp) {
+      console.log('❌ Invalid OTP provided');
+      return res.status(400).json({ error: 'Invalid OTP' });
+    }
+
+    console.log('✅ OTP verified successfully');
+
+    // Mark OTP as used
+    await pool.query(`
+      UPDATE password_reset_tokens 
+      SET used = true 
+      WHERE email = $1
+    `, [email]);
+
+    // Hash the new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update user password
+    await pool.query(`
+      UPDATE users 
+      SET password = $1 
+      WHERE email = $2
+    `, [hashedPassword, email]);
+
+    console.log(`✅ Password updated successfully for ${email}`);
+
+    // Clean up used OTP
+    setTimeout(async () => {
+      await pool.query('DELETE FROM password_reset_tokens WHERE email = $1', [email]);
+    }, 60000); // Clean up after 1 minute
 
     // Production database code would go here
     res.json({ message: 'Password reset successful' });
