@@ -446,13 +446,13 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
     console.log(`📱 Generated OTP: ${otp} for ${email}`);
 
-    // Store OTP in database
+    // Store OTP in database (delete any existing OTP for this email first)
+    await pool.query('DELETE FROM password_reset_tokens WHERE email = $1', [email]);
+    
     await pool.query(`
-      INSERT INTO password_reset_tokens (email, token, expires_at, used) 
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (email) 
-      DO UPDATE SET token = $2, expires_at = $3, used = $4, created_at = CURRENT_TIMESTAMP
-    `, [email, otp, expiresAt, false]);
+      INSERT INTO password_reset_tokens (user_id, email, token, expires_at, used) 
+      VALUES ($1, $2, $3, $4, $5)
+    `, [user.id, email, otp, expiresAt, false]);
 
     console.log('💾 OTP stored in database');
 
@@ -813,12 +813,26 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS password_reset_tokens (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        token VARCHAR(255) UNIQUE NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        token VARCHAR(255) NOT NULL,
         expires_at TIMESTAMP NOT NULL,
         used BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(email)
       )
     `);
+
+    // Add email column if it doesn't exist (migration for existing tables)
+    console.log('Checking if email column exists in password_reset_tokens...');
+    try {
+      await pool.query(`
+        ALTER TABLE password_reset_tokens 
+        ADD COLUMN IF NOT EXISTS email VARCHAR(255)
+      `);
+      console.log('Email column added/verified');
+    } catch (err) {
+      console.log('Email column already exists or error:', err.message);
+    }
 
     // Add user_id column if it doesn't exist (migration for existing tables)
     console.log('Checking if user_id column exists...');
