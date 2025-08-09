@@ -1,13 +1,13 @@
 # 💰 Expense Tracker with Analytics Dashboard
 
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Visit_App-blue?style=for-the-badge)](https://expense-tracker-rho-eight-39.vercel.app/)
-[![Analytics](https://img.shields.io/badge/📊_Analytics-Admin_Dashboard-purple?style=for-the-badge)](https://expense-tracker-rho-eight-39.vercel.app/analytics.html)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Visit_App-blue?style=for-the-badge)](https://expense-tracker-1801.vercel.app/)
+[![Analytics](https://img.shields.io/badge/📊_Analytics-Admin_Dashboard-purple?style=for-the-badge)](https://expense-tracker-1801.vercel.app/analytics.html)
 [![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen?style=for-the-badge)]()
 
 A **full-stack expense tracker** with enterprise-level analytics and user management. Built in 7 days using **vanilla JavaScript** to master web fundamentals.
 
-> **🎯 Live App:** [expense-tracker-rho-eight-39.vercel.app](https://expense-tracker-rho-eight-39.vercel.app/)  
-> **📊 Admin Panel:** [Analytics Dashboard](https://expense-tracker-rho-eight-39.vercel.app/analytics.html) *(Contact for demo access)*
+ **🎯 Live App:** [expense-tracker-1801.vercel.app](https://expense-tracker-1801.vercel.app/)  
+> **📊 Admin Panel:** [Analytics Dashboard](https://expense-tracker-1801.vercel.app/analytics.html) *(Contact for demo access)*
 
 ---
 
@@ -76,7 +76,7 @@ Built this project in **7 intensive days** to prove that vanilla JavaScript can 
 ## 📈 Live Demo
 
 **Try the App:**
-1. Visit: [expense-tracker-rho-eight-39.vercel.app](https://expense-tracker-rho-eight-39.vercel.app/)
+1. Visit: [expense-tracker-1801.vercel.app](https://expense-tracker-1801.vercel.app/)
 2. Register with email/password or use demo account
 3. Add expenses using quick buttons or custom amounts
 4. View real-time charts and spending analytics
